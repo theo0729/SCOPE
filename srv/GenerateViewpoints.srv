@@ -1,0 +1,11 @@
+string config_path
+string input_cloud_path
+string input_mesh_path
+string output_waypoint_path
+---
+bool success
+string message
+uint32 candidate_viewpoint_num
+uint32 selected_waypoint_num
+float64 expected_coverage_ratio
+float64 total_path_length

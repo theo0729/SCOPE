@@ -1,0 +1,91 @@
+scope:
+  mode: offline
+  world_frame: camera_init
+
+input:
+  use_cloud: true
+  use_mesh: false
+  cloud_path: "/home/uav/test_data/example.pcd"
+  mesh_path: ""
+
+output:
+  waypoint_yaml: "selected_waypoints.yaml"
+  waypoint_csv: "selected_waypoints.csv"
+  coverage_report: "coverage_report.json"
+
+preprocess:
+  voxel_leaf_size: 0.05
+  enable_roi_filter: false
+  roi_min: [-10.0, -10.0, -2.0]
+  roi_max: [10.0, 10.0, 10.0]
+  enable_outlier_removal: true
+  mean_k: 30
+  stddev_mul_thresh: 1.0
+
+normal:
+  search_radius: 0.20
+  k_search: 30
+  flip_towards_origin: false
+
+sensor:
+  camera:
+    enable: true
+    fov_h_deg: 90.0
+    fov_v_deg: 60.0
+    min_view_distance: 0.8
+    max_view_distance: 4.0
+    fixed_mount_pitch_deg: -20.0
+
+  lidar:
+    enable: false
+    fov_h_deg: 360.0
+    fov_v_deg: 59.0
+    min_range: 0.3
+    max_range: 20.0
+
+uav:
+  body_radius: 0.35
+  localization_error: 0.10
+  tracking_error: 0.10
+  safety_margin: 0.15
+
+viewpoint:
+  surface_sampling_resolution: 0.30
+  candidate_distances: [1.0, 1.5, 2.0]
+  max_candidate_num: 5000
+  min_height: -100.0
+  max_height: 100.0
+
+  yaw_planning: true
+  enable_pitch_planning: false
+  pitch_mode: fixed_mount
+  pitch_lower_deg: -60.0
+  pitch_upper_deg: 20.0
+  output_pitch: false
+
+coverage:
+  target_coverage_ratio: 0.90
+  min_view_redundancy: 1
+  max_selected_viewpoint_num: 300
+  min_new_covered_points: 10
+
+safety:
+  enable_safety_filter: true
+  unknown_as_obstacle: true
+  min_clearance: 0.70
+  enable_segment_check: true
+  segment_check_resolution: 0.10
+
+optimization:
+  route_method: greedy_tsp
+  start_position: [0.0, 0.0, 0.0]
+  weight_distance: 1.0
+  weight_yaw: 0.2
+  weight_height: 0.2
+
+visualization:
+  publish_markers: true
+  marker_topic: "/scope/markers"
+  raw_cloud_topic: "/scope/raw_cloud"
+  processed_cloud_topic: "/scope/processed_cloud"
+  waypoint_topic: "/scope/waypoints"

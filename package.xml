@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>scope</name>
+  <version>0.1.0</version>
+
+  <description>
+    SCOPE. Surface Coverage and Occupancy-aware Planning Engine.
+    A ROS-based viewpoint planning framework for autonomous data acquisition
+    in complex three-dimensional structures.
+  </description>
+
+  <maintainer email="22427146@zju.edu.cn">theo0729</maintainer>
+  <license>MIT</license>
+
+  <url type="repository">https://github.com/theo0729/SCOPE.git</url>
+
+  <author email="22427146@zju.edu.cn">theo0729</author>
+
+  <!-- Build system -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Message generation -->
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <!-- ROS dependencies -->
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <!-- Point cloud dependencies -->
+  <depend>pcl_ros</depend>
+  <depend>pcl_conversions</depend>
+
+  <!-- TF dependencies -->
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+
+  <!-- System dependencies -->
+  <build_depend>libeigen3-dev</build_depend>
+  <build_export_depend>libeigen3-dev</build_export_depend>
+  <exec_depend>libeigen3-dev</exec_depend>
+
+  <depend>yaml-cpp</depend>
+
+  <!-- Future optional dependencies:
+       octomap_ros, octomap_msgs, voxblox_ros, nvblox, vdbfusion, ompl, lkh
+       are not included in V0.1.
+  -->
+
+  <export>
+  </export>
+</package>

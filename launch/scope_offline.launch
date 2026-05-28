@@ -1,0 +1,10 @@
+<launch>
+  <arg name="config_file" default="$(find scope)/config/scope_default.yaml" />
+
+  <node pkg="scope"
+        type="scope_offline_node"
+        name="scope_offline_node"
+        output="screen">
+    <param name="config_file" value="$(arg config_file)" />
+  </node>
+</launch>
