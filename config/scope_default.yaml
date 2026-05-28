@@ -14,10 +14,10 @@ output:
   coverage_report: "coverage_report.json"
 
 preprocess:
-  voxel_leaf_size: 0.10
-  enable_roi_filter: false
+  voxel_leaf_size: 0.05
+  enable_roi_filter: true
   roi_min: [-10.0, -10.0, -2.0]
-  roi_max: [10.0, 10.0, 10.0]
+  roi_max: [2.5, 7.95, 1.95]
   enable_outlier_removal: false
   mean_k: 30
   stddev_mul_thresh: 1.0

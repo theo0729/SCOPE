@@ -24,7 +24,7 @@ using PointCloudT = pcl::PointCloud<PointT>;
 using PointCloudPtr = PointCloudT::Ptr;
 using PointCloudConstPtr = PointCloudT::ConstPtr;
 
-using PointNormalT = pcl::PointNormal;
+using PointNormalT = pcl::PointXYZRGBNormal;
 using PointNormalCloudT = pcl::PointCloud<PointNormalT>;
 using PointNormalCloudPtr = PointNormalCloudT::Ptr;
 using PointNormalCloudConstPtr = PointNormalCloudT::ConstPtr;

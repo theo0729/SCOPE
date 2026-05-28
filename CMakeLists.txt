@@ -115,6 +115,7 @@ add_library(scope_core
   src/common/parameters.cpp
   src/io/pcd_loader.cpp
   src/map/cloud_preprocessor.cpp
+  src/map/normal_estimator.cpp
 )
 
 add_dependencies(scope_core
