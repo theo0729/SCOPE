@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 
   if (!params.input.use_cloud)
   {
-    ROS_ERROR_STREAM("[SCOPE] V0.1.3 currently requires input.use_cloud = true.");
+    ROS_ERROR_STREAM("[SCOPE] V0.1.4 currently requires input.use_cloud = true.");
     return 1;
   }
 
@@ -312,7 +312,7 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Published normal marker topic: /scope/normal_markers");
   ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
                   << params.scope.world_frame);
-  ROS_INFO_STREAM("[SCOPE] V0.1.3 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] V0.1.4 finished. Keep node alive for RViz visualization.");
 
   ros::spin();
 
