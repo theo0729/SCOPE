@@ -18,6 +18,7 @@
 #include "scope/map/cloud_preprocessor.hpp"
 #include "scope/map/normal_estimator.hpp"
 #include "scope/map/target_surface.hpp"
+#include "scope/viewpoint/candidate_generator.hpp"
 
 namespace
 {
@@ -131,6 +132,88 @@ visualization_msgs::MarkerArray createNormalMarkers(
   return marker_array;
 }
 
+visualization_msgs::MarkerArray createCandidateMarkers(
+    const std::vector<scope::ViewpointCandidate>& candidates,
+    const std::string& frame_id,
+    const double line_width,
+    const std::size_t max_marker_lines)
+{
+  visualization_msgs::MarkerArray marker_array;
+
+  visualization_msgs::Marker line_marker;
+  line_marker.header.frame_id = frame_id;
+  line_marker.header.stamp = ros::Time::now();
+  line_marker.ns = "scope_candidate_view_rays";
+  line_marker.id = 0;
+  line_marker.type = visualization_msgs::Marker::LINE_LIST;
+  line_marker.action = visualization_msgs::Marker::ADD;
+  line_marker.pose.orientation.w = 1.0;
+  line_marker.scale.x = line_width;
+
+  line_marker.color.r = 0.0;
+  line_marker.color.g = 0.4;
+  line_marker.color.b = 1.0;
+  line_marker.color.a = 0.8;
+
+  visualization_msgs::Marker point_marker;
+  point_marker.header.frame_id = frame_id;
+  point_marker.header.stamp = ros::Time::now();
+  point_marker.ns = "scope_candidate_positions";
+  point_marker.id = 1;
+  point_marker.type = visualization_msgs::Marker::SPHERE_LIST;
+  point_marker.action = visualization_msgs::Marker::ADD;
+  point_marker.pose.orientation.w = 1.0;
+
+  point_marker.scale.x = 0.05;
+  point_marker.scale.y = 0.05;
+  point_marker.scale.z = 0.05;
+
+  point_marker.color.r = 1.0;
+  point_marker.color.g = 0.7;
+  point_marker.color.b = 0.0;
+  point_marker.color.a = 0.9;
+
+  if (candidates.empty())
+  {
+    marker_array.markers.push_back(line_marker);
+    marker_array.markers.push_back(point_marker);
+    return marker_array;
+  }
+
+  const std::size_t stride =
+      std::max<std::size_t>(1, candidates.size() / std::max<std::size_t>(1, max_marker_lines));
+
+  for (std::size_t i = 0; i < candidates.size(); i += stride)
+  {
+    const auto& candidate = candidates[i];
+
+    if (!candidate.is_valid)
+    {
+      continue;
+    }
+
+    geometry_msgs::Point p0;
+    p0.x = candidate.position.x();
+    p0.y = candidate.position.y();
+    p0.z = candidate.position.z();
+
+    geometry_msgs::Point p1;
+    p1.x = candidate.target_point.x();
+    p1.y = candidate.target_point.y();
+    p1.z = candidate.target_point.z();
+
+    line_marker.points.push_back(p0);
+    line_marker.points.push_back(p1);
+
+    point_marker.points.push_back(p0);
+  }
+
+  marker_array.markers.push_back(line_marker);
+  marker_array.markers.push_back(point_marker);
+
+  return marker_array;
+}
+
 }  // namespace
 
 int main(int argc, char** argv)
@@ -165,7 +248,7 @@ int main(int argc, char** argv)
 
   if (!params.input.use_cloud)
   {
-    ROS_ERROR_STREAM("[SCOPE] V0.1.4 currently requires input.use_cloud = true.");
+    ROS_ERROR_STREAM("[SCOPE] V0.2.1 currently requires input.use_cloud = true.");
     return 1;
   }
 
@@ -264,6 +347,30 @@ int main(int argc, char** argv)
                   << surface_elements.size());
 
   // --------------------------------------------------------------------------
+  // Candidate viewpoint generation
+  // --------------------------------------------------------------------------
+  ROS_INFO_STREAM("[SCOPE] Start candidate viewpoint generation.");
+
+  scope::CandidateGenerator candidate_generator(params.viewpoint);
+
+  const scope::CandidateGenerationResult candidate_result =
+      candidate_generator.generateFromSurfaceElements(surface_elements);
+
+  if (!candidate_result.success)
+  {
+    ROS_ERROR_STREAM("[SCOPE] Candidate viewpoint generation failed. "
+                     << candidate_result.message);
+    return 1;
+  }
+
+  const std::vector<scope::ViewpointCandidate>& candidate_viewpoints =
+      candidate_result.candidates;
+
+  ROS_INFO_STREAM("[SCOPE] " << candidate_result.message);
+  ROS_INFO_STREAM("[SCOPE] Candidate viewpoint count: "
+                  << candidate_viewpoints.size());                  
+
+  // --------------------------------------------------------------------------
   // Publishers
   // --------------------------------------------------------------------------
   ros::Publisher raw_cloud_pub =
@@ -282,6 +389,10 @@ int main(int argc, char** argv)
       nh.advertise<visualization_msgs::MarkerArray>(
           "/scope/normal_markers", 1, true);
 
+  ros::Publisher candidate_marker_pub =
+      nh.advertise<visualization_msgs::MarkerArray>(
+          "/scope/candidate_markers", 1, true);
+
   const sensor_msgs::PointCloud2 raw_msg =
       toRosCloudMsg(raw_cloud, params.scope.world_frame);
 
@@ -297,12 +408,19 @@ int main(int argc, char** argv)
                           0.20,
                           1000);
 
+  const visualization_msgs::MarkerArray candidate_markers =
+      createCandidateMarkers(candidate_viewpoints,
+                             params.scope.world_frame,
+                             0.01,
+                             1000);                          
+
   ros::Duration(0.5).sleep();
 
   raw_cloud_pub.publish(raw_msg);
   processed_cloud_pub.publish(processed_msg);
   normal_cloud_pub.publish(normal_msg);
   normal_marker_pub.publish(normal_markers);
+  candidate_marker_pub.publish(candidate_markers);
 
   ROS_INFO_STREAM("[SCOPE] Published raw cloud topic: "
                   << params.visualization.raw_cloud_topic);
@@ -312,9 +430,10 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Published normal marker topic: /scope/normal_markers");
   ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
                   << params.scope.world_frame);
-  ROS_INFO_STREAM("[SCOPE] V0.1.4 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] V0.2.1 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
 
   ros::spin();
 
   return 0;
-}
+} 

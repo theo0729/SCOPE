@@ -117,6 +117,7 @@ add_library(scope_core
   src/map/cloud_preprocessor.cpp
   src/map/normal_estimator.cpp
   src/map/target_surface.cpp
+  src/viewpoint/candidate_generator.cpp
 )
 
 add_dependencies(scope_core
