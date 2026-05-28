@@ -20,6 +20,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  roslib
   std_msgs
   sensor_msgs
   geometry_msgs
@@ -71,6 +72,7 @@ catkin_package(
   CATKIN_DEPENDS
     roscpp
     rospy
+    roslib
     std_msgs
     sensor_msgs
     geometry_msgs
@@ -120,6 +122,7 @@ add_library(scope_core
   src/viewpoint/candidate_generator.cpp
   src/safety/collision_checker.cpp
   src/safety/safety_filter.cpp
+  src/io/waypoint_io.cpp
 )
 
 add_dependencies(scope_core

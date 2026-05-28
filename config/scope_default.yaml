@@ -9,9 +9,18 @@ input:
   mesh_path: ""
 
 output:
+  enable_candidate_export: true
+  output_dir: "log/output"
+
   waypoint_yaml: "selected_waypoints.yaml"
   waypoint_csv: "selected_waypoints.csv"
   coverage_report: "coverage_report.json"
+
+  candidate_statistics_json: "candidate_statistics.json"
+  safe_candidates_csv: "safe_candidates.csv"
+  unsafe_candidates_csv: "unsafe_candidates.csv"
+  safe_candidates_yaml: "safe_candidates.yaml"
+  unsafe_candidates_yaml: "unsafe_candidates.yaml"
 
 preprocess:
   voxel_leaf_size: 0.05

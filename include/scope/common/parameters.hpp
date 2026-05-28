@@ -31,9 +31,19 @@ struct InputParams
 
 struct OutputParams
 {
+  bool enable_candidate_export = true;
+
+  std::string output_dir = "/home/uav/scope_output";
+
   std::string waypoint_yaml = "selected_waypoints.yaml";
   std::string waypoint_csv = "selected_waypoints.csv";
   std::string coverage_report = "coverage_report.json";
+
+  std::string candidate_statistics_json = "candidate_statistics.json";
+  std::string safe_candidates_csv = "safe_candidates.csv";
+  std::string unsafe_candidates_csv = "unsafe_candidates.csv";
+  std::string safe_candidates_yaml = "safe_candidates.yaml";
+  std::string unsafe_candidates_yaml = "unsafe_candidates.yaml";
 };
 
 struct PreprocessParams

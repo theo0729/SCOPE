@@ -217,9 +217,40 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
   input.mesh_path = readScalar<std::string>(input_node, "mesh_path", input.mesh_path);
 
   const YAML::Node output_node = root["output"];
-  output.waypoint_yaml = readScalar<std::string>(output_node, "waypoint_yaml", output.waypoint_yaml);
-  output.waypoint_csv = readScalar<std::string>(output_node, "waypoint_csv", output.waypoint_csv);
-  output.coverage_report = readScalar<std::string>(output_node, "coverage_report", output.coverage_report);
+
+  output.enable_candidate_export =
+      readScalar<bool>(output_node, "enable_candidate_export",
+                       output.enable_candidate_export);
+
+  output.output_dir =
+      readScalar<std::string>(output_node, "output_dir", output.output_dir);
+
+  output.waypoint_yaml =
+      readScalar<std::string>(output_node, "waypoint_yaml", output.waypoint_yaml);
+  output.waypoint_csv =
+      readScalar<std::string>(output_node, "waypoint_csv", output.waypoint_csv);
+  output.coverage_report =
+      readScalar<std::string>(output_node, "coverage_report", output.coverage_report);
+
+  output.candidate_statistics_json =
+      readScalar<std::string>(output_node, "candidate_statistics_json",
+                              output.candidate_statistics_json);
+
+  output.safe_candidates_csv =
+      readScalar<std::string>(output_node, "safe_candidates_csv",
+                              output.safe_candidates_csv);
+
+  output.unsafe_candidates_csv =
+      readScalar<std::string>(output_node, "unsafe_candidates_csv",
+                              output.unsafe_candidates_csv);
+
+  output.safe_candidates_yaml =
+      readScalar<std::string>(output_node, "safe_candidates_yaml",
+                              output.safe_candidates_yaml);
+
+  output.unsafe_candidates_yaml =
+      readScalar<std::string>(output_node, "unsafe_candidates_yaml",
+                              output.unsafe_candidates_yaml);
 
   const YAML::Node preprocess_node = root["preprocess"];
   preprocess.voxel_leaf_size =
@@ -454,6 +485,25 @@ bool ScopeParameters::validate(std::string* error_message) const
     return false;
   }
 
+  if (output.output_dir.empty())
+  {
+    setError("output.output_dir is empty.");
+    return false;
+  }
+
+  if (output.enable_candidate_export)
+  {
+    if (output.candidate_statistics_json.empty() ||
+        output.safe_candidates_csv.empty() ||
+        output.unsafe_candidates_csv.empty() ||
+        output.safe_candidates_yaml.empty() ||
+        output.unsafe_candidates_yaml.empty())
+    {
+      setError("Candidate export is enabled, but some candidate output file names are empty.");
+      return false;
+    }
+  }
+
   if (preprocess.voxel_leaf_size <= 0.0)
   {
     setError("preprocess.voxel_leaf_size must be positive.");
@@ -643,9 +693,16 @@ void ScopeParameters::printSummary() const
   std::cout << "  mesh_path: " << input.mesh_path << "\n";
 
   std::cout << "[output]\n";
+  std::cout << "  enable_candidate_export: " << output.enable_candidate_export << "\n";
+  std::cout << "  output_dir: " << output.output_dir << "\n";
   std::cout << "  waypoint_yaml: " << output.waypoint_yaml << "\n";
   std::cout << "  waypoint_csv: " << output.waypoint_csv << "\n";
   std::cout << "  coverage_report: " << output.coverage_report << "\n";
+  std::cout << "  candidate_statistics_json: " << output.candidate_statistics_json << "\n";
+  std::cout << "  safe_candidates_csv: " << output.safe_candidates_csv << "\n";
+  std::cout << "  unsafe_candidates_csv: " << output.unsafe_candidates_csv << "\n";
+  std::cout << "  safe_candidates_yaml: " << output.safe_candidates_yaml << "\n";
+  std::cout << "  unsafe_candidates_yaml: " << output.unsafe_candidates_yaml << "\n";
 
   std::cout << "[preprocess]\n";
   std::cout << "  voxel_leaf_size: " << preprocess.voxel_leaf_size << "\n";

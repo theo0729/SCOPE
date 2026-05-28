@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <ros/package.h>
 
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,7 @@
 #include "scope/map/target_surface.hpp"
 #include "scope/viewpoint/candidate_generator.hpp"
 #include "scope/safety/safety_filter.hpp"
+#include "scope/io/waypoint_io.hpp"
 
 namespace
 {
@@ -47,6 +49,34 @@ std::string statsToString(const scope::CloudStatistics& stats)
       << ", centroid=" << vecToString(stats.centroid);
 
   return oss.str();
+}
+
+std::string resolvePackageRelativePath(const std::string& path,
+                                       const std::string& package_name)
+{
+  if (path.empty())
+  {
+    return path;
+  }
+
+  // Absolute path. Use directly.
+  if (path.front() == '/')
+  {
+    return path;
+  }
+
+  const std::string package_path = ros::package::getPath(package_name);
+
+  if (package_path.empty())
+  {
+    ROS_WARN_STREAM("[SCOPE] Failed to locate ROS package: "
+                    << package_name
+                    << ". Use output_dir as a relative path: "
+                    << path);
+    return path;
+  }
+
+  return package_path + "/" + path;
 }
 
 sensor_msgs::PointCloud2 toRosCloudMsg(const scope::PointCloudConstPtr& cloud,
@@ -275,7 +305,7 @@ int main(int argc, char** argv)
 
   if (!params.input.use_cloud)
   {
-    ROS_ERROR_STREAM("[SCOPE] V0.2.2 currently requires input.use_cloud = true.");
+    ROS_ERROR_STREAM("[SCOPE] V0.2.3 currently requires input.use_cloud = true.");
     return 1;
   }
 
@@ -437,7 +467,48 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Safe candidate count: "
                   << safe_candidates.size());
   ROS_INFO_STREAM("[SCOPE] Unsafe candidate count: "
-                  << unsafe_candidates.size());                  
+                  << unsafe_candidates.size());
+                  
+  // --------------------------------------------------------------------------
+  // Candidate diagnostics export
+  // --------------------------------------------------------------------------
+  if (params.output.enable_candidate_export)
+  {
+    ROS_INFO_STREAM("[SCOPE] Start candidate diagnostics export.");
+
+    scope::OutputParams resolved_output_params = params.output;
+
+    resolved_output_params.output_dir =
+        resolvePackageRelativePath(params.output.output_dir, "scope");
+
+    ROS_INFO_STREAM("[SCOPE] Candidate export output_dir resolved to: "
+                    << resolved_output_params.output_dir);
+
+    const scope::CandidateExportResult export_result =
+        scope::WaypointIO::exportCandidateDiagnostics(resolved_output_params,
+                                                      candidate_result,
+                                                      safety_result,
+                                                      params.scope.world_frame);
+
+    if (!export_result.success)
+    {
+      ROS_ERROR_STREAM("[SCOPE] Candidate diagnostics export failed. "
+                       << export_result.message);
+      return 1;
+    }
+
+    ROS_INFO_STREAM("[SCOPE] " << export_result.message);
+    ROS_INFO_STREAM("[SCOPE]   statistics json: "
+                    << export_result.statistics_json_path);
+    ROS_INFO_STREAM("[SCOPE]   safe csv: "
+                    << export_result.safe_csv_path);
+    ROS_INFO_STREAM("[SCOPE]   unsafe csv: "
+                    << export_result.unsafe_csv_path);
+    ROS_INFO_STREAM("[SCOPE]   safe yaml: "
+                    << export_result.safe_yaml_path);
+    ROS_INFO_STREAM("[SCOPE]   unsafe yaml: "
+                    << export_result.unsafe_yaml_path);
+  }                  
 
   // --------------------------------------------------------------------------
   // Publishers
@@ -540,12 +611,12 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Published normal marker topic: /scope/normal_markers");
   ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
                   << params.scope.world_frame);
-  ROS_INFO_STREAM("[SCOPE] V0.2.2 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] V0.2.3 finished. Keep node alive for RViz visualization.");
   ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published safe candidate marker topic: /scope/safe_candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published unsafe candidate marker topic: /scope/unsafe_candidate_markers");
-  ROS_INFO_STREAM("[SCOPE] V0.2.2 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] V0.2.3 finished. Keep node alive for RViz visualization.");
 
   ros::spin();
 
