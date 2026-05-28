@@ -22,9 +22,9 @@ public:
   PcdLoader() = default;
   ~PcdLoader() = default;
 
-  static PcdLoadResult loadXYZ(const std::string& pcd_path);
+static PcdLoadResult loadCloud(const std::string& pcd_path);
 
-  static bool loadXYZ(const std::string& pcd_path,
+static bool loadCloud(const std::string& pcd_path,
                       PointCloudPtr* cloud,
                       std::string* error_message = nullptr);
 

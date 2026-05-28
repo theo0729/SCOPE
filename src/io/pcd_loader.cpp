@@ -17,7 +17,7 @@ bool PcdLoader::fileExists(const std::string& path)
   return file.good();
 }
 
-PcdLoadResult PcdLoader::loadXYZ(const std::string& pcd_path)
+PcdLoadResult PcdLoader::loadCloud(const std::string& pcd_path)
 {
   PcdLoadResult result;
   result.cloud.reset(new PointCloudT);
@@ -66,9 +66,9 @@ PcdLoadResult PcdLoader::loadXYZ(const std::string& pcd_path)
   return result;
 }
 
-bool PcdLoader::loadXYZ(const std::string& pcd_path,
-                        PointCloudPtr* cloud,
-                        std::string* error_message)
+bool PcdLoader::loadCloud(const std::string& pcd_path,
+                          PointCloudPtr* cloud,
+                          std::string* error_message)
 {
   if (cloud == nullptr)
   {
@@ -79,7 +79,7 @@ bool PcdLoader::loadXYZ(const std::string& pcd_path,
     return false;
   }
 
-  const PcdLoadResult result = loadXYZ(pcd_path);
+  const PcdLoadResult result = loadCloud(pcd_path);
 
   if (!result.success)
   {

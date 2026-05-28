@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Loading PCD: " << params.input.cloud_path);
 
   const scope::PcdLoadResult load_result =
-      scope::PcdLoader::loadXYZ(params.input.cloud_path);
+      scope::PcdLoader::loadCloud(params.input.cloud_path);
 
   if (!load_result.success)
   {
