@@ -87,6 +87,7 @@ enum class SurfaceSource : std::uint8_t
 struct SurfaceElement
 {
   std::uint32_t id = 0;
+  std::uint32_t source_index = 0;
 
   SurfaceSource source = SurfaceSource::UNKNOWN;
 
@@ -95,7 +96,7 @@ struct SurfaceElement
   // For point-cloud input, this is the oriented surface point.
   Eigen::Vector3d position = Eigen::Vector3d::Zero();
 
-  // Outward surface normal.
+  // Outward or observation-side surface normal.
   Eigen::Vector3d normal = Eigen::Vector3d::UnitZ();
 
   // Area represented by this element.
@@ -106,6 +107,10 @@ struct SurfaceElement
   // Coverage priority weight.
   // It can be area * ROI weight in later versions.
   double weight = 1.0;
+
+  // Local curvature from normal estimation.
+  // It is useful for filtering unstable edge points.
+  double curvature = 0.0;
 
   int roi_id = 0;
 

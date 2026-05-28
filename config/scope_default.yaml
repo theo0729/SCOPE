@@ -63,6 +63,13 @@ viewpoint:
   pitch_upper_deg: 20.0
   output_pitch: false
 
+target_surface:
+  enable_curvature_filter: true
+  max_curvature: 0.05
+  default_area: 1.0
+  default_weight: 1.0
+  use_area_weight: false
+
 coverage:
   target_coverage_ratio: 0.90
   min_view_redundancy: 1

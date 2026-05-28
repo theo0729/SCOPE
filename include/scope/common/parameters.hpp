@@ -120,6 +120,18 @@ struct ViewpointParams
   bool output_pitch = false;
 };
 
+struct TargetSurfaceParams
+{
+  bool enable_curvature_filter = true;
+
+  double max_curvature = 0.05;
+
+  double default_area = 1.0;
+  double default_weight = 1.0;
+
+  bool use_area_weight = false;
+};
+
 struct CoverageParams
 {
   double target_coverage_ratio = 0.90;
@@ -180,6 +192,7 @@ struct ScopeParameters
   UavParams uav;
 
   ViewpointParams viewpoint;
+  TargetSurfaceParams target_surface;
   CoverageParams coverage;
   SafetyParams safety;
   OptimizationParams optimization;

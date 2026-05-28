@@ -17,6 +17,7 @@
 #include "scope/io/pcd_loader.hpp"
 #include "scope/map/cloud_preprocessor.hpp"
 #include "scope/map/normal_estimator.hpp"
+#include "scope/map/target_surface.hpp"
 
 namespace
 {
@@ -237,6 +238,30 @@ int main(int argc, char** argv)
   scope::PointNormalCloudPtr normal_cloud = normal_result.cloud;
 
   ROS_INFO_STREAM("[SCOPE] " << normal_result.message);
+
+  // --------------------------------------------------------------------------
+  // Target surface construction
+  // --------------------------------------------------------------------------
+  ROS_INFO_STREAM("[SCOPE] Start target surface construction.");
+
+  scope::TargetSurfaceBuilder target_surface_builder(params.target_surface);
+
+  const scope::TargetSurfaceBuildResult target_surface_result =
+      target_surface_builder.buildFromNormalCloud(normal_cloud);
+
+  if (!target_surface_result.success)
+  {
+    ROS_ERROR_STREAM("[SCOPE] Target surface construction failed. "
+                     << target_surface_result.message);
+    return 1;
+  }
+
+  const std::vector<scope::SurfaceElement>& surface_elements =
+      target_surface_result.elements;
+
+  ROS_INFO_STREAM("[SCOPE] " << target_surface_result.message);
+  ROS_INFO_STREAM("[SCOPE] Target surface element count: "
+                  << surface_elements.size());
 
   // --------------------------------------------------------------------------
   // Publishers

@@ -318,6 +318,33 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
   viewpoint.output_pitch =
       readScalar<bool>(viewpoint_node, "output_pitch", viewpoint.output_pitch);
 
+  const YAML::Node target_surface_node = root["target_surface"];
+
+  target_surface.enable_curvature_filter =
+      readScalar<bool>(target_surface_node,
+                       "enable_curvature_filter",
+                       target_surface.enable_curvature_filter);
+
+  target_surface.max_curvature =
+      readScalar<double>(target_surface_node,
+                         "max_curvature",
+                         target_surface.max_curvature);
+
+  target_surface.default_area =
+      readScalar<double>(target_surface_node,
+                         "default_area",
+                         target_surface.default_area);
+
+  target_surface.default_weight =
+      readScalar<double>(target_surface_node,
+                         "default_weight",
+                         target_surface.default_weight);
+
+  target_surface.use_area_weight =
+      readScalar<bool>(target_surface_node,
+                       "use_area_weight",
+                       target_surface.use_area_weight);
+  
   const YAML::Node coverage_node = root["coverage"];
   coverage.target_coverage_ratio =
       readScalar<double>(coverage_node, "target_coverage_ratio",
@@ -543,6 +570,24 @@ bool ScopeParameters::validate(std::string* error_message) const
     return false;
   }
 
+  if (target_surface.max_curvature < 0.0)
+  {
+    setError("target_surface.max_curvature should be non-negative.");
+    return false;
+  }
+
+  if (target_surface.default_area <= 0.0)
+  {
+    setError("target_surface.default_area must be positive.");
+    return false;
+  }
+
+  if (target_surface.default_weight <= 0.0)
+  {
+    setError("target_surface.default_weight must be positive.");
+    return false;
+  }
+
   if (coverage.target_coverage_ratio <= 0.0 || coverage.target_coverage_ratio > 1.0)
   {
     setError("coverage.target_coverage_ratio should be in (0, 1].");
@@ -650,6 +695,18 @@ void ScopeParameters::printSummary() const
   std::cout << "  pitch_lower_deg: " << viewpoint.pitch_lower_deg << "\n";
   std::cout << "  pitch_upper_deg: " << viewpoint.pitch_upper_deg << "\n";
   std::cout << "  output_pitch: " << viewpoint.output_pitch << "\n";
+
+  std::cout << "[target_surface]\n";
+  std::cout << "  enable_curvature_filter: "
+            << target_surface.enable_curvature_filter << "\n";
+  std::cout << "  max_curvature: "
+            << target_surface.max_curvature << "\n";
+  std::cout << "  default_area: "
+            << target_surface.default_area << "\n";
+  std::cout << "  default_weight: "
+            << target_surface.default_weight << "\n";
+  std::cout << "  use_area_weight: "
+            << target_surface.use_area_weight << "\n";
 
   std::cout << "[coverage]\n";
   std::cout << "  target_coverage_ratio: " << coverage.target_coverage_ratio << "\n";
