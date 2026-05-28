@@ -5,7 +5,7 @@ scope:
 input:
   use_cloud: true
   use_mesh: false
-  cloud_path: "/home/uav/test_data/example.pcd"
+  cloud_path: "/home/uav/pcd_files/all_raw_points.pcd"
   mesh_path: ""
 
 output:
@@ -14,11 +14,11 @@ output:
   coverage_report: "coverage_report.json"
 
 preprocess:
-  voxel_leaf_size: 0.05
+  voxel_leaf_size: 0.10
   enable_roi_filter: false
   roi_min: [-10.0, -10.0, -2.0]
   roi_max: [10.0, 10.0, 10.0]
-  enable_outlier_removal: true
+  enable_outlier_removal: false
   mean_k: 30
   stddev_mul_thresh: 1.0
 

@@ -19,7 +19,7 @@ namespace scope
 // Basic point cloud aliases
 // ================================================================
 
-using PointT = pcl::PointXYZ;
+using PointT = pcl::PointXYZRGB;
 using PointCloudT = pcl::PointCloud<PointT>;
 using PointCloudPtr = PointCloudT::Ptr;
 using PointCloudConstPtr = PointCloudT::ConstPtr;
