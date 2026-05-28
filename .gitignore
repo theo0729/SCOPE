@@ -1,10 +1,11 @@
-# ROS 编译生成文件 
-build/
-devel/
-install/
-log/
+# ROS / catkin build outputs
+/build/
+/devel/
+/install/
+/logs/
+.catkin_tools/
 
-# CMake & C++ 编译缓存
+# CMake & C++ build cache
 CMakeCache.txt
 CMakeFiles/
 Makefile
@@ -12,11 +13,34 @@ cmake_install.cmake
 *.o
 *.so
 
-# Python 缓存 
+# Python cache
 __pycache__/
 *.pyc
 
-# 编辑器/系统隐藏文件
+# Editor / system files
 .vscode/
 .idea/
 .DS_Store
+
+# SCOPE runtime output directory
+log/*
+!log/.gitkeep
+!log/output/
+log/output/*
+!log/output/.gitkeep
+
+# Candidate export files, if generated outside log/output by mistake
+candidate_statistics.json
+safe_candidates.csv
+unsafe_candidates.csv
+safe_candidates.yaml
+unsafe_candidates.yaml
+selected_waypoints.yaml
+coverage_report.json
+
+# Large runtime data
+*.bag
+*.pcd
+*.ply
+*.obj
+*.bt
