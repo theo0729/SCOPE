@@ -118,6 +118,8 @@ add_library(scope_core
   src/map/normal_estimator.cpp
   src/map/target_surface.cpp
   src/viewpoint/candidate_generator.cpp
+  src/safety/collision_checker.cpp
+  src/safety/safety_filter.cpp
 )
 
 add_dependencies(scope_core

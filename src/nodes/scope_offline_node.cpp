@@ -19,6 +19,7 @@
 #include "scope/map/normal_estimator.hpp"
 #include "scope/map/target_surface.hpp"
 #include "scope/viewpoint/candidate_generator.hpp"
+#include "scope/safety/safety_filter.hpp"
 
 namespace
 {
@@ -132,62 +133,88 @@ visualization_msgs::MarkerArray createNormalMarkers(
   return marker_array;
 }
 
-visualization_msgs::MarkerArray createCandidateMarkers(
+std::size_t computeGlobalVisualizationStride(const std::size_t total_count,
+                                             const std::size_t max_marker_lines)
+{
+  if (total_count == 0 || max_marker_lines == 0)
+  {
+    return 1;
+  }
+
+  if (total_count <= max_marker_lines)
+  {
+    return 1;
+  }
+
+  return static_cast<std::size_t>(
+      std::ceil(static_cast<double>(total_count) /
+                static_cast<double>(max_marker_lines)));
+}
+
+visualization_msgs::MarkerArray createViewpointMarkers(
     const std::vector<scope::ViewpointCandidate>& candidates,
     const std::string& frame_id,
+    const std::string& ns_prefix,
     const double line_width,
-    const std::size_t max_marker_lines)
+    const double point_scale,
+    const std::size_t global_id_stride,
+    const float point_r,
+    const float point_g,
+    const float point_b,
+    const float point_a,
+    const float line_r,
+    const float line_g,
+    const float line_b,
+    const float line_a)
 {
   visualization_msgs::MarkerArray marker_array;
 
   visualization_msgs::Marker line_marker;
   line_marker.header.frame_id = frame_id;
   line_marker.header.stamp = ros::Time::now();
-  line_marker.ns = "scope_candidate_view_rays";
+  line_marker.ns = ns_prefix + "_view_rays";
   line_marker.id = 0;
   line_marker.type = visualization_msgs::Marker::LINE_LIST;
   line_marker.action = visualization_msgs::Marker::ADD;
   line_marker.pose.orientation.w = 1.0;
   line_marker.scale.x = line_width;
 
-  line_marker.color.r = 0.0;
-  line_marker.color.g = 0.4;
-  line_marker.color.b = 1.0;
-  line_marker.color.a = 0.8;
+  line_marker.color.r = line_r;
+  line_marker.color.g = line_g;
+  line_marker.color.b = line_b;
+  line_marker.color.a = line_a;
 
   visualization_msgs::Marker point_marker;
   point_marker.header.frame_id = frame_id;
   point_marker.header.stamp = ros::Time::now();
-  point_marker.ns = "scope_candidate_positions";
+  point_marker.ns = ns_prefix + "_positions";
   point_marker.id = 1;
   point_marker.type = visualization_msgs::Marker::SPHERE_LIST;
   point_marker.action = visualization_msgs::Marker::ADD;
   point_marker.pose.orientation.w = 1.0;
 
-  point_marker.scale.x = 0.05;
-  point_marker.scale.y = 0.05;
-  point_marker.scale.z = 0.05;
+  point_marker.scale.x = point_scale;
+  point_marker.scale.y = point_scale;
+  point_marker.scale.z = point_scale;
 
-  point_marker.color.r = 1.0;
-  point_marker.color.g = 0.7;
-  point_marker.color.b = 0.0;
-  point_marker.color.a = 0.9;
+  point_marker.color.r = point_r;
+  point_marker.color.g = point_g;
+  point_marker.color.b = point_b;
+  point_marker.color.a = point_a;
 
-  if (candidates.empty())
+  const std::size_t id_stride = std::max<std::size_t>(1, global_id_stride);
+
+  for (const auto& candidate : candidates)
   {
-    marker_array.markers.push_back(line_marker);
-    marker_array.markers.push_back(point_marker);
-    return marker_array;
-  }
-
-  const std::size_t stride =
-      std::max<std::size_t>(1, candidates.size() / std::max<std::size_t>(1, max_marker_lines));
-
-  for (std::size_t i = 0; i < candidates.size(); i += stride)
-  {
-    const auto& candidate = candidates[i];
-
     if (!candidate.is_valid)
+    {
+      continue;
+    }
+
+    // Use the original global candidate id for visualization sampling.
+    // This guarantees that all/safe/unsafe markers are sampled from
+    // the same global candidate set.
+    if (candidate.id % id_stride != 0)
     {
       continue;
     }
@@ -368,7 +395,49 @@ int main(int argc, char** argv)
 
   ROS_INFO_STREAM("[SCOPE] " << candidate_result.message);
   ROS_INFO_STREAM("[SCOPE] Candidate viewpoint count: "
-                  << candidate_viewpoints.size());                  
+                  << candidate_viewpoints.size());      
+                  
+  // --------------------------------------------------------------------------
+  // Safety filtering based on KD-tree clearance
+  // --------------------------------------------------------------------------
+  ROS_INFO_STREAM("[SCOPE] Start candidate safety filtering.");
+
+  scope::SafetyFilter safety_filter(params.safety);
+
+  const scope::SafetyFilterResult safety_result =
+      safety_filter.filterCandidates(candidate_viewpoints, processed_cloud);
+
+  if (!safety_result.success)
+  {
+    ROS_ERROR_STREAM("[SCOPE] Candidate safety filtering failed. "
+                     << safety_result.message);
+    return 1;
+  }
+
+  const std::vector<scope::ViewpointCandidate>& safe_candidates =
+      safety_result.safe_candidates;
+
+  const std::vector<scope::ViewpointCandidate>& unsafe_candidates =
+      safety_result.unsafe_candidates;
+
+  // 数据调试用⬇： 
+  const std::size_t partition_count =
+    safe_candidates.size() + unsafe_candidates.size();
+
+  ROS_INFO_STREAM("[SCOPE] Candidate partition check: all="
+                  << candidate_viewpoints.size()
+                  << ", safe+unsafe=" << partition_count);
+
+  if (partition_count != candidate_viewpoints.size())
+  {
+    ROS_WARN_STREAM("[SCOPE] Candidate partition mismatch!");
+  }
+      
+  ROS_INFO_STREAM("[SCOPE] " << safety_result.message);
+  ROS_INFO_STREAM("[SCOPE] Safe candidate count: "
+                  << safe_candidates.size());
+  ROS_INFO_STREAM("[SCOPE] Unsafe candidate count: "
+                  << unsafe_candidates.size());                  
 
   // --------------------------------------------------------------------------
   // Publishers
@@ -393,6 +462,14 @@ int main(int argc, char** argv)
       nh.advertise<visualization_msgs::MarkerArray>(
           "/scope/candidate_markers", 1, true);
 
+  ros::Publisher safe_candidate_marker_pub =
+      nh.advertise<visualization_msgs::MarkerArray>(
+          "/scope/safe_candidate_markers", 1, true);
+
+  ros::Publisher unsafe_candidate_marker_pub =
+      nh.advertise<visualization_msgs::MarkerArray>(
+          "/scope/unsafe_candidate_markers", 1, true);          
+
   const sensor_msgs::PointCloud2 raw_msg =
       toRosCloudMsg(raw_cloud, params.scope.world_frame);
 
@@ -408,11 +485,41 @@ int main(int argc, char** argv)
                           0.20,
                           1000);
 
+  const std::size_t candidate_visualization_stride =
+      computeGlobalVisualizationStride(candidate_viewpoints.size(), 1000);
+
+  ROS_INFO_STREAM("[SCOPE] Candidate visualization global id stride: "
+                  << candidate_visualization_stride);
+
   const visualization_msgs::MarkerArray candidate_markers =
-      createCandidateMarkers(candidate_viewpoints,
+      createViewpointMarkers(candidate_viewpoints,
                              params.scope.world_frame,
+                             "scope_all_candidates",
                              0.01,
-                             1000);                          
+                             0.05,
+                             candidate_visualization_stride,
+                             1.0f, 0.7f, 0.0f, 0.9f,
+                             0.0f, 0.4f, 1.0f, 0.8f);
+
+  const visualization_msgs::MarkerArray safe_candidate_markers =
+      createViewpointMarkers(safe_candidates,
+                             params.scope.world_frame,
+                             "scope_safe_candidates",
+                             0.012,
+                             0.06,
+                             candidate_visualization_stride,
+                             0.0f, 1.0f, 0.0f, 0.9f,
+                             0.0f, 1.0f, 1.0f, 0.8f);
+
+  const visualization_msgs::MarkerArray unsafe_candidate_markers =
+      createViewpointMarkers(unsafe_candidates,
+                             params.scope.world_frame,
+                             "scope_unsafe_candidates",
+                             0.012,
+                             0.06,
+                             candidate_visualization_stride,
+                             1.0f, 0.0f, 0.0f, 0.9f,
+                             1.0f, 0.0f, 0.5f, 0.8f);                      
 
   ros::Duration(0.5).sleep();
 
@@ -421,6 +528,9 @@ int main(int argc, char** argv)
   normal_cloud_pub.publish(normal_msg);
   normal_marker_pub.publish(normal_markers);
   candidate_marker_pub.publish(candidate_markers);
+  candidate_marker_pub.publish(candidate_markers);
+  safe_candidate_marker_pub.publish(safe_candidate_markers);
+  unsafe_candidate_marker_pub.publish(unsafe_candidate_markers);
 
   ROS_INFO_STREAM("[SCOPE] Published raw cloud topic: "
                   << params.visualization.raw_cloud_topic);
@@ -432,6 +542,10 @@ int main(int argc, char** argv)
                   << params.scope.world_frame);
   ROS_INFO_STREAM("[SCOPE] V0.2.1 finished. Keep node alive for RViz visualization.");
   ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] Published safe candidate marker topic: /scope/safe_candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] Published unsafe candidate marker topic: /scope/unsafe_candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] V0.2.2 finished. Keep node alive for RViz visualization.");
 
   ros::spin();
 
