@@ -1,133 +1,421 @@
+# ============================================================
+# SCOPE 默认配置文件
+# Surface Coverage and Occupancy-aware Planning Engine
+#
+# 当前配置适用于离线点云输入、候选视点生成、安全过滤、
+# FOV 覆盖评价、贪心覆盖选点以及最终航点导出。
+# ============================================================
+
+
+# ============================================================
+# 1. SCOPE 基础运行参数
+# ============================================================
 scope:
+  # 运行模式。当前主要支持 offline，即离线读取已有点云进行规划。
   mode: offline
+
+  # 全局坐标系名称。应与 FAST-LIVO2 / FAST-LIO2 输出点云所在坐标系一致。
+  # 当前点云通常位于 camera_init 坐标系下。
   world_frame: camera_init
 
+
+# ============================================================
+# 2. 输入数据配置
+# ============================================================
 input:
+  # 是否使用点云输入。
+  # 当前版本主要使用 PCD 点云作为几何地图和目标表面来源。
   use_cloud: true
+
+  # 是否使用 mesh 输入。
+  # 当前版本暂未启用 mesh，后续可用于三角面片中心与法向的视点规划。
   use_mesh: false
+
+  # 输入 PCD 文件路径。
+  # 建议后续也支持相对路径或 launch 参数传入，避免不同环境下频繁修改。
   cloud_path: "/home/uav/pcd_files/all_raw_points.pcd"
+
+  # 输入 mesh 文件路径。
+  # 当前 use_mesh=false，因此此项留空。
   mesh_path: ""
 
+
+# ============================================================
+# 3. 输出文件配置
+# ============================================================
 output:
+  # 是否导出候选视点诊断文件。
+  # 包括 safe_candidates、unsafe_candidates 和 candidate_statistics。
   enable_candidate_export: true
+
+  # 是否导出最终选中的巡检航点文件。
+  # 输出 selected_waypoints.yaml 和 selected_waypoints.csv。
   enable_selected_waypoint_export: true
+
+  # 输出目录。
+  # 使用相对路径时，程序会解析为 SCOPE 功能包目录下的对应路径。
+  # 例如 log/output 会解析到 $(find scope)/log/output。
   output_dir: "log/output"
 
+  # 最终选中航点的 YAML 文件名。
+  # 后续 mission executor 可直接读取该文件。
   waypoint_yaml: "selected_waypoints.yaml"
+
+  # 最终选中航点的 CSV 文件名。
+  # 便于人工检查、Excel 打开和数据分析。
   waypoint_csv: "selected_waypoints.csv"
+
+  # 覆盖率报告文件名。
+  # 当前可作为后续扩展项，用于输出覆盖率、路径长度等统计信息。
   coverage_report: "coverage_report.json"
 
+  # 候选视点统计报告文件名。
   candidate_statistics_json: "candidate_statistics.json"
+
+  # 通过安全过滤或进一步评价后的候选视点 CSV 文件名。
   safe_candidates_csv: "safe_candidates.csv"
+
+  # 未通过安全过滤的候选视点 CSV 文件名。
   unsafe_candidates_csv: "unsafe_candidates.csv"
+
+  # 通过安全过滤或进一步评价后的候选视点 YAML 文件名。
   safe_candidates_yaml: "safe_candidates.yaml"
+
+  # 未通过安全过滤的候选视点 YAML 文件名。
   unsafe_candidates_yaml: "unsafe_candidates.yaml"
 
+
+# ============================================================
+# 4. 点云预处理参数
+# ============================================================
 preprocess:
+  # 体素降采样叶子尺寸，单位为 m。
+  # 数值越大，点云越稀疏，计算更快，但表面细节会减少。
   voxel_leaf_size: 0.05
+
+  # 是否启用 ROI 裁剪。
+  # 建议在炉膛、锅炉、舱室等局部空间规划时启用，以减少无关区域。
   enable_roi_filter: true
+
+  # ROI 最小边界，格式为 [x_min, y_min, z_min]，单位为 m。
   roi_min: [-10.0, -10.0, -2.0]
+
+  # ROI 最大边界，格式为 [x_max, y_max, z_max]，单位为 m。
   roi_max: [2.5, 7.95, 1.95]
+
+  # 是否启用统计离群点去除。
+  # 点云质量较差时可以开启；若点云已经较干净，可关闭以保留更多结构细节。
   enable_outlier_removal: false
+
+  # 统计离群点去除的邻域点数。
+  # 仅在 enable_outlier_removal=true 时生效。
   mean_k: 30
+
+  # 统计离群点去除的标准差阈值。
+  # 数值越小，滤波越严格。
   stddev_mul_thresh: 1.0
 
+
+# ============================================================
+# 5. 表面法向估计参数
+# ============================================================
 normal:
+  # 法向估计的搜索半径，单位为 m。
+  # 半径越大，法向越平滑，但边缘和交线附近更容易出现混合法向。
   search_radius: 0.20
+
+  # K 近邻搜索点数。
+  # 当前实现中优先使用 search_radius；当 search_radius 不可用时可使用 k_search。
   k_search: 30
+
+  # 是否将法向翻转到朝向坐标原点。
+  # 对内部空间不一定总是合理，因此当前默认关闭。
   flip_towards_origin: false
 
+
+# ============================================================
+# 6. 传感器参数
+# ============================================================
 sensor:
   camera:
+    # 是否启用相机 FOV 评价。
     enable: true
+
+    # 相机水平视场角，单位为 deg。
     fov_h_deg: 90.0
+
+    # 相机垂直视场角，单位为 deg。
     fov_v_deg: 60.0
+
+    # 最小有效观测距离，单位为 m。
+    # 目标表面距离视点小于该值时认为不适合采集。
     min_view_distance: 0.8
+
+    # 最大有效观测距离，单位为 m。
+    # 目标表面距离视点大于该值时认为超出有效观测范围。
     max_view_distance: 4.0
+
+    # 固定安装相机的俯仰角，单位为 deg。
+    # 当前主要保留参数接口，后续可用于无云台相机的视轴修正。
     fixed_mount_pitch_deg: -20.0
 
   lidar:
+    # 是否启用激光雷达视场约束。
+    # 当前版本暂未作为主要覆盖评价依据。
     enable: false
+
+    # 激光雷达水平视场角，单位为 deg。
     fov_h_deg: 360.0
+
+    # 激光雷达垂直视场角，单位为 deg。
     fov_v_deg: 59.0
+
+    # 激光雷达最小测距范围，单位为 m。
     min_range: 0.3
+
+    # 激光雷达最大测距范围，单位为 m。
     max_range: 20.0
 
+
+# ============================================================
+# 7. 无人机安全尺寸与误差裕度
+# ============================================================
 uav:
+  # 无人机等效半径，单位为 m。
+  # 可近似取机体外接球半径或安全包络半径。
   body_radius: 0.35
+
+  # 定位误差裕度，单位为 m。
   localization_error: 0.10
+
+  # 轨迹跟踪误差裕度，单位为 m。
   tracking_error: 0.10
+
+  # 额外安全裕度，单位为 m。
   safety_margin: 0.15
 
+
+# ============================================================
+# 8. 候选视点生成参数
+# ============================================================
 viewpoint:
+  # 目标表面采样分辨率，单位为 m。
+  # 当前版本主要作为预留参数，后续可用于表面基元降采样。
   surface_sampling_resolution: 0.30
+
+  # 沿表面法向生成候选视点的距离集合，单位为 m。
+  # 每个目标表面点会尝试在这些距离处生成候选视点。
   candidate_distances: [1.0, 1.5, 2.0]
+
+  # 最大候选视点数量。
+  # 若理论候选点过多，程序会按统一步长抽样。
   max_candidate_num: 5000
+
+  # 候选视点允许的最小高度，单位为 m。
   min_height: -100.0
+
+  # 候选视点允许的最大高度，单位为 m。
   max_height: 100.0
 
+  # 是否规划 yaw。
+  # 当前候选视点会根据视点到目标点方向计算 yaw。
   yaw_planning: true
+
+  # 是否启用 pitch 规划。
+  # 当前无云台场景下默认关闭，但保留接口。
   enable_pitch_planning: false
+
+  # pitch 模式。
+  # fixed_mount 表示相机固定安装；gimbal 表示未来支持云台。
   pitch_mode: fixed_mount
+
+  # pitch 下限，单位为 deg。
   pitch_lower_deg: -60.0
+
+  # pitch 上限，单位为 deg。
   pitch_upper_deg: 20.0
+
+  # 是否在最终输出中启用 pitch。
+  # 当前无云台模式下默认 false。
   output_pitch: false
 
+
+# ============================================================
+# 9. 目标表面层参数
+# ============================================================
 target_surface:
+  # 是否过滤高曲率点。
+  # 高曲率点通常位于边缘、交线或法向不稳定区域。
   enable_curvature_filter: true
+
+  # 最大允许曲率。
+  # 曲率超过该值的点不会作为目标表面基元。
   max_curvature: 0.05
+
+  # 点云表面基元默认面积。
+  # 当前点云模式下尚未计算真实局部面积，因此使用默认值。
   default_area: 1.0
+
+  # 点云表面基元默认权重。
+  # 当前每个有效表面基元默认等权。
   default_weight: 1.0
+
+  # 是否使用面积作为覆盖权重。
+  # mesh 模式下可启用；当前点云模式下默认关闭。
   use_area_weight: false
 
+
+# ============================================================
+# 10. 覆盖评价参数
+# ============================================================
 coverage:
+  # 是否启用 FOV 过滤。
+  # 开启后会判断目标表面是否位于相机视场内。
   enable_fov_filter: true
+
+  # 目标覆盖率。
+  # 贪心覆盖选择达到该比例后停止选点。
   target_coverage_ratio: 0.90
 
+  # 最大允许入射角，单位为 deg。
+  # 入射角越大，图像质量和表面观测效果通常越差。
   max_incidence_angle_deg: 70.0
+
+  # 单个候选视点至少需要看到的目标表面点数量。
+  # 小于该数量则认为该候选视点 FOV 无效。
   min_visible_surface_points: 10
 
+  # 覆盖冗余度要求。
+  # 1 表示每个表面点至少被一个视点覆盖即可。
   min_view_redundancy: 1
+
+  # 最多选择的最终视点数量。
   max_selected_viewpoint_num: 300
+
+  # 贪心选点中，每新增一个视点至少需要带来的新覆盖点数量。
+  # 若最佳候选视点新增覆盖低于该值，则提前停止。
   min_new_covered_points: 10
 
+
+# ============================================================
+# 11. 视点评分参数
+# ============================================================
 scoring:
+  # 是否启用综合评分。
+  # 若关闭，则可退化为只使用 coverage_gain 作为评分。
   enable_scoring: true
 
+  # 覆盖收益权重。
+  # 视点覆盖的目标表面越多，该项越高。
   weight_coverage: 1.0
+
+  # 安全距离权重。
+  # 候选视点离点云障碍越远，该项越高。
   weight_clearance: 0.3
+
+  # 观测距离权重。
+  # 候选视点距离越接近 ideal_view_distance，该项越高。
   weight_distance: 0.2
+
+  # 入射角权重。
+  # 入射角越小，该项越高。
   weight_incidence: 0.3
 
+  # 理想观测距离，单位为 m。
+  # 建议与 candidate_distances 的中间值一致。
   ideal_view_distance: 1.5
+
+  # 安全距离评分的饱和值，单位为 m。
+  # 当 clearance 超过该值后，安全评分不再继续增加。
   max_clearance_for_score: 2.0
 
-  top_candidate_num: 300  
+  # 保留用于可视化和诊断的 Top 候选视点数量。
+  top_candidate_num: 300
 
+
+# ============================================================
+# 12. 巡检任务执行参数
+# ============================================================
 mission:
+  # 是否采用“到点后悬停转向采集”的模式。
+  # 当前推荐 true，即 EGO 负责 xyz，到点后执行 yaw 对准和采集。
   stop_and_turn_mode: true
+
+  # 每个航点默认采集时间，单位为 s。
   default_capture_time: 2.0
+
+  # 航点位置到达判定阈值，单位为 m。
   position_tolerance: 0.15
+
+  # yaw 到达判定阈值，单位为 deg。
   yaw_tolerance_deg: 5.0
+
+  # 是否在任务执行中输出 pitch。
+  # 当前无云台方案默认关闭。
   output_pitch: false
 
+
+# ============================================================
+# 13. 安全过滤参数
+# ============================================================
 safety:
+  # 是否启用候选视点安全过滤。
   enable_safety_filter: true
+
+  # 是否将未知空间视为障碍。
+  # 当前 KD-tree 版本暂未真正表达 unknown，该参数为后续 OctoMap/voxel map 预留。
   unknown_as_obstacle: true
+
+  # 候选视点到点云表面的最小安全距离，单位为 m。
+  # 小于该距离的候选视点会被标记为 unsafe。
   min_clearance: 0.70
+
+  # 是否启用线段安全检查。
+  # 当前版本主要进行候选点 clearance 检查；该参数为后续航段碰撞检测预留。
   enable_segment_check: true
+
+  # 线段安全检查采样分辨率，单位为 m。
   segment_check_resolution: 0.10
 
+
+# ============================================================
+# 14. 路径优化参数
+# ============================================================
 optimization:
+  # 航点排序方法。
+  # 当前为预留参数，后续可用于 greedy_tsp、nearest_neighbor、lkh 等路径排序。
   route_method: greedy_tsp
+
+  # 任务起点位置，单位为 m。
   start_position: [0.0, 0.0, 0.0]
+
+  # 路径长度代价权重。
   weight_distance: 1.0
+
+  # yaw 变化代价权重。
   weight_yaw: 0.2
+
+  # 高度变化代价权重。
   weight_height: 0.2
 
+
+# ============================================================
+# 15. RViz 可视化参数
+# ============================================================
 visualization:
+  # 是否发布 Marker 可视化。
   publish_markers: true
+
+  # 通用 Marker 话题名。
+  # 当前多数模块使用独立 MarkerArray 话题，该项作为预留。
   marker_topic: "/scope/markers"
+
+  # 原始点云发布话题。
   raw_cloud_topic: "/scope/raw_cloud"
+
+  # 预处理后点云发布话题。
   processed_cloud_topic: "/scope/processed_cloud"
+
+  # 最终航点话题。
+  # 当前主要通过文件导出，话题发布作为后续扩展。
   waypoint_topic: "/scope/waypoints"
