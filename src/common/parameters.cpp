@@ -406,6 +406,40 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
       readScalar<int>(coverage_node, "min_new_covered_points",
                       coverage.min_new_covered_points);
 
+  const YAML::Node scoring_node = root["scoring"];
+
+  scoring.enable_scoring =
+      readScalar<bool>(scoring_node, "enable_scoring",
+                       scoring.enable_scoring);
+
+  scoring.weight_coverage =
+      readScalar<double>(scoring_node, "weight_coverage",
+                         scoring.weight_coverage);
+
+  scoring.weight_clearance =
+      readScalar<double>(scoring_node, "weight_clearance",
+                         scoring.weight_clearance);
+
+  scoring.weight_distance =
+      readScalar<double>(scoring_node, "weight_distance",
+                         scoring.weight_distance);
+
+  scoring.weight_incidence =
+      readScalar<double>(scoring_node, "weight_incidence",
+                         scoring.weight_incidence);
+
+  scoring.ideal_view_distance =
+      readScalar<double>(scoring_node, "ideal_view_distance",
+                         scoring.ideal_view_distance);
+
+  scoring.max_clearance_for_score =
+      readScalar<double>(scoring_node, "max_clearance_for_score",
+                         scoring.max_clearance_for_score);
+
+  scoring.top_candidate_num =
+      readScalar<int>(scoring_node, "top_candidate_num",
+                      scoring.top_candidate_num);                      
+
   const YAML::Node safety_node = root["safety"];
   safety.enable_safety_filter =
       readScalar<bool>(safety_node, "enable_safety_filter",
@@ -691,6 +725,33 @@ bool ScopeParameters::validate(std::string* error_message) const
     return false;
   }
 
+  if (scoring.weight_coverage < 0.0 ||
+      scoring.weight_clearance < 0.0 ||
+      scoring.weight_distance < 0.0 ||
+      scoring.weight_incidence < 0.0)
+  {
+    setError("scoring weights should be non-negative.");
+    return false;
+  }
+
+  if (scoring.ideal_view_distance <= 0.0)
+  {
+    setError("scoring.ideal_view_distance must be positive.");
+    return false;
+  }
+
+  if (scoring.max_clearance_for_score <= 0.0)
+  {
+    setError("scoring.max_clearance_for_score must be positive.");
+    return false;
+  }
+
+  if (scoring.top_candidate_num <= 0)
+  {
+    setError("scoring.top_candidate_num must be positive.");
+    return false;
+  }
+
   if (safety.min_clearance < 0.0)
   {
     setError("safety.min_clearance should be non-negative.");
@@ -802,6 +863,16 @@ void ScopeParameters::printSummary() const
   std::cout << "  min_view_redundancy: " << coverage.min_view_redundancy << "\n";
   std::cout << "  max_selected_viewpoint_num: " << coverage.max_selected_viewpoint_num << "\n";
   std::cout << "  min_new_covered_points: " << coverage.min_new_covered_points << "\n";
+
+  std::cout << "[scoring]\n";
+  std::cout << "  enable_scoring: " << scoring.enable_scoring << "\n";
+  std::cout << "  weight_coverage: " << scoring.weight_coverage << "\n";
+  std::cout << "  weight_clearance: " << scoring.weight_clearance << "\n";
+  std::cout << "  weight_distance: " << scoring.weight_distance << "\n";
+  std::cout << "  weight_incidence: " << scoring.weight_incidence << "\n";
+  std::cout << "  ideal_view_distance: " << scoring.ideal_view_distance << "\n";
+  std::cout << "  max_clearance_for_score: " << scoring.max_clearance_for_score << "\n";
+  std::cout << "  top_candidate_num: " << scoring.top_candidate_num << "\n";
 
   std::cout << "[safety]\n";
   std::cout << "  enable_safety_filter: " << safety.enable_safety_filter << "\n";

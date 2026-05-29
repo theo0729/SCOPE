@@ -156,6 +156,21 @@ struct CoverageParams
   int min_new_covered_points = 10;
 };
 
+struct ScoringParams
+{
+  bool enable_scoring = true;
+
+  double weight_coverage = 1.0;
+  double weight_clearance = 0.3;
+  double weight_distance = 0.2;
+  double weight_incidence = 0.3;
+
+  double ideal_view_distance = 1.5;
+  double max_clearance_for_score = 2.0;
+
+  int top_candidate_num = 300;
+};
+
 struct SafetyParams
 {
   bool enable_safety_filter = true;
@@ -209,6 +224,7 @@ struct ScopeParameters
   ViewpointParams viewpoint;
   TargetSurfaceParams target_surface;
   CoverageParams coverage;
+  ScoringParams scoring;
   SafetyParams safety;
   OptimizationParams optimization;
   VisualizationParams visualization;

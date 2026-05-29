@@ -123,6 +123,7 @@ add_library(scope_core
   src/viewpoint/candidate_generator.cpp
   src/viewpoint/fov_model.cpp
   src/viewpoint/coverage_evaluator.cpp
+  src/viewpoint/viewpoint_selector.cpp
   src/safety/collision_checker.cpp
   src/safety/safety_filter.cpp
 )

@@ -23,6 +23,7 @@
 #include "scope/safety/safety_filter.hpp"
 #include "scope/io/waypoint_io.hpp"
 #include "scope/viewpoint/coverage_evaluator.hpp"
+#include "scope/viewpoint/viewpoint_selector.hpp"
 
 namespace
 {
@@ -306,7 +307,7 @@ int main(int argc, char** argv)
 
   if (!params.input.use_cloud)
   {
-    ROS_ERROR_STREAM("[SCOPE] V0.3.0 currently requires input.use_cloud = true.");
+    ROS_ERROR_STREAM("[SCOPE] V0.3.1 currently requires input.use_cloud = true.");
     return 1;
   }
 
@@ -497,6 +498,35 @@ int main(int argc, char** argv)
                   << fov_valid_candidates.size());                  
 
   // --------------------------------------------------------------------------
+  // Viewpoint scoring and ranking
+  // --------------------------------------------------------------------------
+  ROS_INFO_STREAM("[SCOPE] Start viewpoint scoring and ranking.");
+
+  scope::ViewpointSelector viewpoint_selector(params.scoring);
+
+  const scope::ViewpointScoringResult scoring_result =
+      viewpoint_selector.scoreAndRankCandidates(fov_valid_candidates);
+
+  if (!scoring_result.success)
+  {
+    ROS_ERROR_STREAM("[SCOPE] Viewpoint scoring failed. "
+                     << scoring_result.message);
+    return 1;
+  }
+
+  const std::vector<scope::ViewpointCandidate>& ranked_candidates =
+      scoring_result.ranked_candidates;
+
+  const std::vector<scope::ViewpointCandidate>& top_candidates =
+      scoring_result.top_candidates;
+
+  ROS_INFO_STREAM("[SCOPE] " << scoring_result.message);
+  ROS_INFO_STREAM("[SCOPE] Ranked candidate count: "
+                  << ranked_candidates.size());
+  ROS_INFO_STREAM("[SCOPE] Top candidate count: "
+                  << top_candidates.size());
+
+  // --------------------------------------------------------------------------
   // Candidate diagnostics export
   // --------------------------------------------------------------------------
   if (params.output.enable_candidate_export)
@@ -515,7 +545,7 @@ int main(int argc, char** argv)
 
     // Use FOV-evaluated candidates for export, so the exported files include
     // coverage_gain, score, and covered_surface_indices.
-    export_safety_result.safe_candidates = coverage_result.evaluated_candidates;
+    export_safety_result.safe_candidates = ranked_candidates;
     export_safety_result.safe_count = export_safety_result.safe_candidates.size();
 
     const scope::CandidateExportResult export_result =
@@ -579,6 +609,10 @@ int main(int argc, char** argv)
       nh.advertise<visualization_msgs::MarkerArray>(
           "/scope/fov_candidate_markers", 1, true);          
 
+  ros::Publisher top_candidate_marker_pub =
+      nh.advertise<visualization_msgs::MarkerArray>(
+          "/scope/top_candidate_markers", 1, true);
+
   const sensor_msgs::PointCloud2 raw_msg =
       toRosCloudMsg(raw_cloud, params.scope.world_frame);
 
@@ -640,6 +674,16 @@ int main(int argc, char** argv)
                              1.0f, 1.0f, 1.0f, 0.95f,
                              1.0f, 1.0f, 0.0f, 0.85f);                             
 
+  const visualization_msgs::MarkerArray top_candidate_markers =
+      createViewpointMarkers(top_candidates,
+                             params.scope.world_frame,
+                             "scope_top_candidates",
+                             0.018,
+                             0.09,
+                             candidate_visualization_stride,
+                             0.5f, 0.0f, 1.0f, 0.95f,
+                             0.8f, 0.4f, 1.0f, 0.9f);
+
   ros::Duration(0.5).sleep();
 
   raw_cloud_pub.publish(raw_msg);
@@ -651,6 +695,7 @@ int main(int argc, char** argv)
   safe_candidate_marker_pub.publish(safe_candidate_markers);
   unsafe_candidate_marker_pub.publish(unsafe_candidate_markers);
   fov_candidate_marker_pub.publish(fov_candidate_markers);
+  top_candidate_marker_pub.publish(top_candidate_markers);
 
   ROS_INFO_STREAM("[SCOPE] Published raw cloud topic: "
                   << params.visualization.raw_cloud_topic);
@@ -660,13 +705,12 @@ int main(int argc, char** argv)
   ROS_INFO_STREAM("[SCOPE] Published normal marker topic: /scope/normal_markers");
   ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
                   << params.scope.world_frame);
-  ROS_INFO_STREAM("[SCOPE] V0.3.0 finished. Keep node alive for RViz visualization.");
   ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published safe candidate marker topic: /scope/safe_candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published unsafe candidate marker topic: /scope/unsafe_candidate_markers");
-  ROS_INFO_STREAM("[SCOPE] V0.3.0 finished. Keep node alive for RViz visualization.");
   ROS_INFO_STREAM("[SCOPE] Published FOV candidate marker topic: /scope/fov_candidate_markers");
-  ROS_INFO_STREAM("[SCOPE] V0.3.0 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] Published top candidate marker topic: /scope/top_candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] V0.3.1 finished. Keep node alive for RViz visualization.");
 
   ros::spin();
 

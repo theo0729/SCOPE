@@ -90,6 +90,19 @@ coverage:
   max_selected_viewpoint_num: 300
   min_new_covered_points: 10
 
+scoring:
+  enable_scoring: true
+
+  weight_coverage: 1.0
+  weight_clearance: 0.3
+  weight_distance: 0.2
+  weight_incidence: 0.3
+
+  ideal_view_distance: 1.5
+  max_clearance_for_score: 2.0
+
+  top_candidate_num: 300  
+
 safety:
   enable_safety_filter: true
   unknown_as_obstacle: true
