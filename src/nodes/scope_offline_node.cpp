@@ -307,7 +307,7 @@ int main(int argc, char** argv)
 
   if (!params.input.use_cloud)
   {
-    ROS_ERROR_STREAM("[SCOPE] V0.3.1 currently requires input.use_cloud = true.");
+    ROS_ERROR_STREAM("[SCOPE] V0.4.0 currently requires input.use_cloud = true.");
     return 1;
   }
 
@@ -527,6 +527,32 @@ int main(int argc, char** argv)
                   << top_candidates.size());
 
   // --------------------------------------------------------------------------
+  // Greedy coverage selection
+  // --------------------------------------------------------------------------
+  ROS_INFO_STREAM("[SCOPE] Start greedy coverage selection.");
+
+  const scope::GreedyCoverageSelectionResult greedy_result =
+      viewpoint_selector.selectGreedyCoverageCandidates(ranked_candidates,
+                                                        surface_elements,
+                                                        params.coverage);
+
+  if (!greedy_result.success)
+  {
+    ROS_ERROR_STREAM("[SCOPE] Greedy coverage selection failed. "
+                     << greedy_result.message);
+    return 1;
+  }
+
+  const std::vector<scope::ViewpointCandidate>& selected_candidates =
+      greedy_result.selected_candidates;
+
+  ROS_INFO_STREAM("[SCOPE] " << greedy_result.message);
+  ROS_INFO_STREAM("[SCOPE] Selected candidate count: "
+                  << selected_candidates.size());
+  ROS_INFO_STREAM("[SCOPE] Selected coverage ratio: "
+                  << greedy_result.coverage_ratio);
+
+  // --------------------------------------------------------------------------
   // Candidate diagnostics export
   // --------------------------------------------------------------------------
   if (params.output.enable_candidate_export)
@@ -613,6 +639,10 @@ int main(int argc, char** argv)
       nh.advertise<visualization_msgs::MarkerArray>(
           "/scope/top_candidate_markers", 1, true);
 
+  ros::Publisher selected_candidate_marker_pub =
+      nh.advertise<visualization_msgs::MarkerArray>(
+          "/scope/selected_candidate_markers", 1, true);
+
   const sensor_msgs::PointCloud2 raw_msg =
       toRosCloudMsg(raw_cloud, params.scope.world_frame);
 
@@ -680,9 +710,19 @@ int main(int argc, char** argv)
                              "scope_top_candidates",
                              0.018,
                              0.09,
-                             candidate_visualization_stride,
+                             1,
                              0.5f, 0.0f, 1.0f, 0.95f,
                              0.8f, 0.4f, 1.0f, 0.9f);
+
+  const visualization_msgs::MarkerArray selected_candidate_markers =
+      createViewpointMarkers(selected_candidates,
+                             params.scope.world_frame,
+                             "scope_selected_candidates",
+                             0.022,
+                             0.12,
+                             1,
+                             1.0f, 0.2f, 1.0f, 0.98f,
+                             1.0f, 0.8f, 1.0f, 0.9f);
 
   ros::Duration(0.5).sleep();
 
@@ -696,6 +736,7 @@ int main(int argc, char** argv)
   unsafe_candidate_marker_pub.publish(unsafe_candidate_markers);
   fov_candidate_marker_pub.publish(fov_candidate_markers);
   top_candidate_marker_pub.publish(top_candidate_markers);
+  selected_candidate_marker_pub.publish(selected_candidate_markers);
 
   ROS_INFO_STREAM("[SCOPE] Published raw cloud topic: "
                   << params.visualization.raw_cloud_topic);
@@ -703,14 +744,15 @@ int main(int argc, char** argv)
                   << params.visualization.processed_cloud_topic);
   ROS_INFO_STREAM("[SCOPE] Published normal cloud topic: /scope/normal_cloud");
   ROS_INFO_STREAM("[SCOPE] Published normal marker topic: /scope/normal_markers");
-  ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
-                  << params.scope.world_frame);
   ROS_INFO_STREAM("[SCOPE] Published candidate marker topic: /scope/candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published safe candidate marker topic: /scope/safe_candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published unsafe candidate marker topic: /scope/unsafe_candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published FOV candidate marker topic: /scope/fov_candidate_markers");
   ROS_INFO_STREAM("[SCOPE] Published top candidate marker topic: /scope/top_candidate_markers");
-  ROS_INFO_STREAM("[SCOPE] V0.3.1 finished. Keep node alive for RViz visualization.");
+  ROS_INFO_STREAM("[SCOPE] Published selected candidate marker topic: /scope/selected_candidate_markers");
+  ROS_INFO_STREAM("[SCOPE] Fixed frame should be set to: "
+                  << params.scope.world_frame);
+  ROS_INFO_STREAM("[SCOPE] V0.4.0 finished. Keep node alive for RViz visualization.");
 
   ros::spin();
 

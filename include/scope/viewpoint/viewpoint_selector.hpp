@@ -27,6 +27,26 @@ struct ViewpointScoringResult
   double mean_score = 0.0;
 };
 
+struct GreedyCoverageSelectionResult
+{
+  bool success = false;
+  std::string message;
+
+  std::vector<ViewpointCandidate> selected_candidates;
+
+  std::size_t input_candidates = 0;
+  std::size_t input_surface_elements = 0;
+
+  std::size_t selected_count = 0;
+  std::size_t covered_surface_count = 0;
+
+  double total_surface_weight = 0.0;
+  double covered_surface_weight = 0.0;
+  double coverage_ratio = 0.0;
+
+  int stop_reason = 0;
+};
+
 class ViewpointSelector
 {
 public:
@@ -41,11 +61,19 @@ public:
   ViewpointScoringResult scoreAndRankCandidates(
       const std::vector<ViewpointCandidate>& candidates) const;
 
+  GreedyCoverageSelectionResult selectGreedyCoverageCandidates(
+      const std::vector<ViewpointCandidate>& ranked_candidates,
+      const std::vector<SurfaceElement>& surface_elements,
+      const CoverageParams& coverage_params) const;
+
 private:
   static double clamp(double value, double lower, double upper);
 
   static double computeMaxCoverageGain(
       const std::vector<ViewpointCandidate>& candidates);
+
+  static double computeTotalSurfaceWeight(
+      const std::vector<SurfaceElement>& surface_elements);
 
   double computeCandidateScore(const ViewpointCandidate& candidate,
                                double max_coverage_gain) const;

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <sstream>
+#include <vector>
 
 namespace scope
 {
@@ -185,6 +186,197 @@ double ViewpointSelector::computeCandidateScore(
       params_.weight_incidence * incidence_score;
 
   return score;
+}
+
+GreedyCoverageSelectionResult ViewpointSelector::selectGreedyCoverageCandidates(
+    const std::vector<ViewpointCandidate>& ranked_candidates,
+    const std::vector<SurfaceElement>& surface_elements,
+    const CoverageParams& coverage_params) const
+{
+  GreedyCoverageSelectionResult result;
+
+  result.input_candidates = ranked_candidates.size();
+  result.input_surface_elements = surface_elements.size();
+  result.total_surface_weight = computeTotalSurfaceWeight(surface_elements);
+
+  if (ranked_candidates.empty())
+  {
+    result.success = false;
+    result.message = "Input ranked candidate list is empty.";
+    return result;
+  }
+
+  if (surface_elements.empty())
+  {
+    result.success = false;
+    result.message = "Input surface element list is empty.";
+    return result;
+  }
+
+  if (result.total_surface_weight <= 1.0e-12)
+  {
+    result.success = false;
+    result.message = "Total surface weight is too small.";
+    return result;
+  }
+
+  const int required_redundancy =
+      std::max(1, coverage_params.min_view_redundancy);
+
+  std::vector<int> covered_counts(surface_elements.size(), 0);
+  std::vector<bool> used_candidates(ranked_candidates.size(), false);
+
+  result.selected_candidates.reserve(
+      static_cast<std::size_t>(coverage_params.max_selected_viewpoint_num));
+
+  for (int iter = 0; iter < coverage_params.max_selected_viewpoint_num; ++iter)
+  {
+    int best_index = -1;
+    std::size_t best_new_count = 0;
+    double best_new_weight = 0.0;
+    double best_score = -std::numeric_limits<double>::infinity();
+
+    for (std::size_t i = 0; i < ranked_candidates.size(); ++i)
+    {
+      if (used_candidates[i])
+      {
+        continue;
+      }
+
+      const auto& candidate = ranked_candidates[i];
+
+      if (!candidate.is_valid)
+      {
+        continue;
+      }
+
+      std::size_t new_count = 0;
+      double new_weight = 0.0;
+
+      for (const auto surface_id : candidate.covered_surface_indices)
+      {
+        if (surface_id >= surface_elements.size())
+        {
+          continue;
+        }
+
+        if (covered_counts[surface_id] < required_redundancy)
+        {
+          ++new_count;
+          new_weight += surface_elements[surface_id].weight;
+        }
+      }
+
+      if (new_count == 0)
+      {
+        continue;
+      }
+
+      const bool better_gain =
+          new_weight > best_new_weight + 1.0e-12;
+
+      const bool tie_better_score =
+          std::abs(new_weight - best_new_weight) <= 1.0e-12 &&
+          candidate.score > best_score;
+
+      if (better_gain || tie_better_score)
+      {
+        best_index = static_cast<int>(i);
+        best_new_count = new_count;
+        best_new_weight = new_weight;
+        best_score = candidate.score;
+      }
+    }
+
+    if (best_index < 0)
+    {
+      result.stop_reason = 1;
+      break;
+    }
+
+    if (static_cast<int>(best_new_count) < coverage_params.min_new_covered_points)
+    {
+      result.stop_reason = 2;
+      break;
+    }
+
+    used_candidates[best_index] = true;
+
+    ViewpointCandidate selected = ranked_candidates[best_index];
+
+    result.selected_candidates.push_back(selected);
+
+    for (const auto surface_id : selected.covered_surface_indices)
+    {
+      if (surface_id >= surface_elements.size())
+      {
+        continue;
+      }
+
+      const int before_count = covered_counts[surface_id];
+      covered_counts[surface_id] += 1;
+
+      if (before_count < required_redundancy &&
+          covered_counts[surface_id] >= required_redundancy)
+      {
+        ++result.covered_surface_count;
+        result.covered_surface_weight += surface_elements[surface_id].weight;
+      }
+    }
+
+    result.coverage_ratio =
+        result.covered_surface_weight / result.total_surface_weight;
+
+    if (result.coverage_ratio >= coverage_params.target_coverage_ratio)
+    {
+      result.stop_reason = 3;
+      break;
+    }
+  }
+
+  result.selected_count = result.selected_candidates.size();
+
+  if (result.selected_candidates.empty())
+  {
+    result.success = false;
+    result.message =
+        "No candidates were selected by greedy coverage selection.";
+    return result;
+  }
+
+  if (result.stop_reason == 0)
+  {
+    result.stop_reason = 4;
+  }
+
+  std::ostringstream oss;
+  oss << "Greedy coverage selection finished. "
+      << "input_candidates=" << result.input_candidates
+      << ", surface_elements=" << result.input_surface_elements
+      << ", selected=" << result.selected_count
+      << ", covered_surface=" << result.covered_surface_count
+      << ", coverage_ratio=" << result.coverage_ratio
+      << ", covered_weight=" << result.covered_surface_weight
+      << ", total_weight=" << result.total_surface_weight
+      << ", stop_reason=" << result.stop_reason;
+
+  result.success = true;
+  result.message = oss.str();
+
+  return result;
+}
+
+double ViewpointSelector::computeTotalSurfaceWeight(
+    const std::vector<SurfaceElement>& surface_elements)
+{
+  double total = 0.0;
+
+  for (const auto& element : surface_elements)
+  {
+    total += element.weight;
+  }
+
+  return total;
 }
 
 }  // namespace scope

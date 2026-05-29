@@ -279,7 +279,7 @@ bool WaypointIO::writeCandidateStatisticsJson(
 
   file << "{\n";
   file << "  \"generated_by\": \"SCOPE\",\n";
-  file << "  \"version\": \"V0.3.1\",\n";
+  file << "  \"version\": \"V0.4.0\",\n";
   file << "  \"frame_id\": \"" << frame_id << "\",\n";
 
   file << "  \"candidate_generation\": {\n";
