@@ -377,4 +377,218 @@ std::string WaypointIO::boolToString(bool value)
   return value ? "true" : "false";
 }
 
+SelectedWaypointExportResult WaypointIO::exportSelectedWaypoints(
+    const OutputParams& output_params,
+    const MissionParams& mission_params,
+    const std::vector<ViewpointCandidate>& selected_candidates,
+    const std::string& frame_id)
+{
+  SelectedWaypointExportResult result;
+
+  std::string error_message;
+  if (!ensureDirectory(output_params.output_dir, &error_message))
+  {
+    result.success = false;
+    result.message = "Failed to create output directory. " + error_message;
+    return result;
+  }
+
+  result.waypoint_yaml_path =
+      joinPath(output_params.output_dir, output_params.waypoint_yaml);
+
+  result.waypoint_csv_path =
+      joinPath(output_params.output_dir, output_params.waypoint_csv);
+
+  if (!writeSelectedWaypointsCsv(selected_candidates,
+                                 result.waypoint_csv_path,
+                                 mission_params,
+                                 &error_message))
+  {
+    result.success = false;
+    result.message = "Failed to write selected waypoint csv. " + error_message;
+    return result;
+  }
+
+  if (!writeSelectedWaypointsYaml(selected_candidates,
+                                  result.waypoint_yaml_path,
+                                  mission_params,
+                                  frame_id,
+                                  &error_message))
+  {
+    result.success = false;
+    result.message = "Failed to write selected waypoint yaml. " + error_message;
+    return result;
+  }
+
+  result.waypoint_count = selected_candidates.size();
+  result.success = true;
+
+  std::ostringstream oss;
+  oss << "Selected waypoints exported. count="
+      << result.waypoint_count
+      << ", yaml=" << result.waypoint_yaml_path
+      << ", csv=" << result.waypoint_csv_path;
+
+  result.message = oss.str();
+
+  return result;
+}
+
+bool WaypointIO::writeSelectedWaypointsCsv(
+    const std::vector<ViewpointCandidate>& selected_candidates,
+    const std::string& file_path,
+    const MissionParams& mission_params,
+    std::string* error_message)
+{
+  std::ofstream file(file_path);
+
+  if (!file.is_open())
+  {
+    if (error_message)
+    {
+      *error_message = "Cannot open file: " + file_path;
+    }
+    return false;
+  }
+
+  file << std::fixed << std::setprecision(6);
+
+  file
+      << "waypoint_id,"
+      << "source_candidate_id,"
+      << "x,y,z,"
+      << "yaw_deg,pitch_deg,"
+      << "target_x,target_y,target_z,"
+      << "view_distance,"
+      << "score,coverage_gain,safety_clearance,"
+      << "covered_surface_count,"
+      << "capture_time,"
+      << "position_tolerance,"
+      << "yaw_tolerance_deg,"
+      << "stop_and_turn_mode\n";
+
+  for (std::size_t i = 0; i < selected_candidates.size(); ++i)
+  {
+    const auto& c = selected_candidates[i];
+
+    file
+        << i << ","
+        << c.id << ","
+        << c.position.x() << ","
+        << c.position.y() << ","
+        << c.position.z() << ","
+        << rad2deg(c.yaw_rad) << ","
+        << rad2deg(c.pitch_rad) << ","
+        << c.target_point.x() << ","
+        << c.target_point.y() << ","
+        << c.target_point.z() << ","
+        << c.view_distance << ","
+        << c.score << ","
+        << c.coverage_gain << ","
+        << c.safety_clearance << ","
+        << c.covered_surface_indices.size() << ","
+        << mission_params.default_capture_time << ","
+        << mission_params.position_tolerance << ","
+        << mission_params.yaw_tolerance_deg << ","
+        << boolToString(mission_params.stop_and_turn_mode)
+        << "\n";
+  }
+
+  return true;
+}
+
+bool WaypointIO::writeSelectedWaypointsYaml(
+    const std::vector<ViewpointCandidate>& selected_candidates,
+    const std::string& file_path,
+    const MissionParams& mission_params,
+    const std::string& frame_id,
+    std::string* error_message)
+{
+  YAML::Emitter out;
+
+  out << YAML::BeginMap;
+
+  out << YAML::Key << "generated_by" << YAML::Value << "SCOPE";
+  out << YAML::Key << "waypoint_type" << YAML::Value << "selected_inspection_waypoints";
+  out << YAML::Key << "frame_id" << YAML::Value << frame_id;
+  out << YAML::Key << "waypoint_count" << YAML::Value
+      << static_cast<int>(selected_candidates.size());
+
+  out << YAML::Key << "mission" << YAML::Value << YAML::BeginMap;
+  out << YAML::Key << "stop_and_turn_mode" << YAML::Value
+      << mission_params.stop_and_turn_mode;
+  out << YAML::Key << "default_capture_time" << YAML::Value
+      << mission_params.default_capture_time;
+  out << YAML::Key << "position_tolerance" << YAML::Value
+      << mission_params.position_tolerance;
+  out << YAML::Key << "yaw_tolerance_deg" << YAML::Value
+      << mission_params.yaw_tolerance_deg;
+  out << YAML::Key << "output_pitch" << YAML::Value
+      << mission_params.output_pitch;
+  out << YAML::EndMap;
+
+  out << YAML::Key << "waypoints" << YAML::Value << YAML::BeginSeq;
+
+  for (std::size_t i = 0; i < selected_candidates.size(); ++i)
+  {
+    const auto& c = selected_candidates[i];
+
+    out << YAML::BeginMap;
+
+    out << YAML::Key << "id" << YAML::Value << static_cast<int>(i);
+    out << YAML::Key << "source_candidate_id" << YAML::Value
+        << static_cast<int>(c.id);
+
+    out << YAML::Key << "position" << YAML::Value << YAML::Flow
+        << YAML::BeginSeq
+        << c.position.x()
+        << c.position.y()
+        << c.position.z()
+        << YAML::EndSeq;
+
+    out << YAML::Key << "yaw_deg" << YAML::Value << rad2deg(c.yaw_rad);
+    out << YAML::Key << "pitch_deg" << YAML::Value << rad2deg(c.pitch_rad);
+
+    out << YAML::Key << "target_point" << YAML::Value << YAML::Flow
+        << YAML::BeginSeq
+        << c.target_point.x()
+        << c.target_point.y()
+        << c.target_point.z()
+        << YAML::EndSeq;
+
+    out << YAML::Key << "view_distance" << YAML::Value << c.view_distance;
+    out << YAML::Key << "score" << YAML::Value << c.score;
+    out << YAML::Key << "coverage_gain" << YAML::Value << c.coverage_gain;
+    out << YAML::Key << "safety_clearance" << YAML::Value << c.safety_clearance;
+    out << YAML::Key << "covered_surface_count" << YAML::Value
+        << static_cast<int>(c.covered_surface_indices.size());
+
+    out << YAML::Key << "capture_time" << YAML::Value
+        << mission_params.default_capture_time;
+    out << YAML::Key << "position_tolerance" << YAML::Value
+        << mission_params.position_tolerance;
+    out << YAML::Key << "yaw_tolerance_deg" << YAML::Value
+        << mission_params.yaw_tolerance_deg;
+
+    out << YAML::EndMap;
+  }
+
+  out << YAML::EndSeq;
+  out << YAML::EndMap;
+
+  std::ofstream file(file_path);
+
+  if (!file.is_open())
+  {
+    if (error_message)
+    {
+      *error_message = "Cannot open file: " + file_path;
+    }
+    return false;
+  }
+
+  file << out.c_str();
+  return true;
+}
+
 }  // namespace scope

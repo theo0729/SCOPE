@@ -32,6 +32,7 @@ struct InputParams
 struct OutputParams
 {
   bool enable_candidate_export = true;
+  bool enable_selected_waypoint_export = true;
 
   std::string output_dir = "/home/uav/scope_output";
 
@@ -171,6 +172,17 @@ struct ScoringParams
   int top_candidate_num = 300;
 };
 
+struct MissionParams
+{
+  bool stop_and_turn_mode = true;
+
+  double default_capture_time = 2.0;
+  double position_tolerance = 0.15;
+  double yaw_tolerance_deg = 5.0;
+
+  bool output_pitch = false;
+};
+
 struct SafetyParams
 {
   bool enable_safety_filter = true;
@@ -225,6 +237,7 @@ struct ScopeParameters
   TargetSurfaceParams target_surface;
   CoverageParams coverage;
   ScoringParams scoring;
+  MissionParams mission;
   SafetyParams safety;
   OptimizationParams optimization;
   VisualizationParams visualization;

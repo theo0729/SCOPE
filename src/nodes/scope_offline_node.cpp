@@ -553,13 +553,44 @@ int main(int argc, char** argv)
                   << greedy_result.coverage_ratio);
 
   // --------------------------------------------------------------------------
+  // Selected waypoint export
+  // --------------------------------------------------------------------------
+  scope::OutputParams resolved_output_params = params.output;
+
+  resolved_output_params.output_dir =
+      resolvePackageRelativePath(params.output.output_dir, "scope");
+
+  ROS_INFO_STREAM("[SCOPE] Output directory resolved to: "
+                  << resolved_output_params.output_dir);
+
+  if (params.output.enable_selected_waypoint_export)
+  {
+    ROS_INFO_STREAM("[SCOPE] Start selected waypoint export.");
+
+    const scope::SelectedWaypointExportResult waypoint_export_result =
+        scope::WaypointIO::exportSelectedWaypoints(resolved_output_params,
+                                                  params.mission,
+                                                  selected_candidates,
+                                                  params.scope.world_frame);
+
+    if (!waypoint_export_result.success)
+    {
+      ROS_ERROR_STREAM("[SCOPE] Selected waypoint export failed. "
+                      << waypoint_export_result.message);
+      return 1;
+    }
+
+    ROS_INFO_STREAM("[SCOPE] " << waypoint_export_result.message);
+  }
+                
+  // --------------------------------------------------------------------------
   // Candidate diagnostics export
   // --------------------------------------------------------------------------
   if (params.output.enable_candidate_export)
   {
     ROS_INFO_STREAM("[SCOPE] Start candidate diagnostics export.");
 
-    scope::OutputParams resolved_output_params = params.output;
+    // scope::OutputParams resolved_output_params = params.output;
 
     resolved_output_params.output_dir =
         resolvePackageRelativePath(params.output.output_dir, "scope");

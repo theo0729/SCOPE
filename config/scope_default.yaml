@@ -10,6 +10,7 @@ input:
 
 output:
   enable_candidate_export: true
+  enable_selected_waypoint_export: true
   output_dir: "log/output"
 
   waypoint_yaml: "selected_waypoints.yaml"
@@ -102,6 +103,13 @@ scoring:
   max_clearance_for_score: 2.0
 
   top_candidate_num: 300  
+
+mission:
+  stop_and_turn_mode: true
+  default_capture_time: 2.0
+  position_tolerance: 0.15
+  yaw_tolerance_deg: 5.0
+  output_pitch: false
 
 safety:
   enable_safety_filter: true

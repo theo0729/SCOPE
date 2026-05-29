@@ -252,6 +252,10 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
       readScalar<std::string>(output_node, "unsafe_candidates_yaml",
                               output.unsafe_candidates_yaml);
 
+  output.enable_selected_waypoint_export =
+      readScalar<bool>(output_node,"enable_selected_waypoint_export",
+                              output.enable_selected_waypoint_export);                      
+
   const YAML::Node preprocess_node = root["preprocess"];
   preprocess.voxel_leaf_size =
       readScalar<double>(preprocess_node, "voxel_leaf_size", preprocess.voxel_leaf_size);
@@ -439,6 +443,33 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
   scoring.top_candidate_num =
       readScalar<int>(scoring_node, "top_candidate_num",
                       scoring.top_candidate_num);                      
+
+  const YAML::Node mission_node = root["mission"];
+
+  mission.stop_and_turn_mode =
+      readScalar<bool>(mission_node,
+                      "stop_and_turn_mode",
+                      mission.stop_and_turn_mode);
+
+  mission.default_capture_time =
+      readScalar<double>(mission_node,
+                        "default_capture_time",
+                        mission.default_capture_time);
+
+  mission.position_tolerance =
+      readScalar<double>(mission_node,
+                        "position_tolerance",
+                        mission.position_tolerance);
+
+  mission.yaw_tolerance_deg =
+      readScalar<double>(mission_node,
+                        "yaw_tolerance_deg",
+                        mission.yaw_tolerance_deg);
+
+  mission.output_pitch =
+      readScalar<bool>(mission_node,
+                      "output_pitch",
+                      mission.output_pitch);
 
   const YAML::Node safety_node = root["safety"];
   safety.enable_safety_filter =
@@ -752,6 +783,24 @@ bool ScopeParameters::validate(std::string* error_message) const
     return false;
   }
 
+  if (mission.default_capture_time < 0.0)
+  {
+    setError("mission.default_capture_time should be non-negative.");
+    return false;
+  }
+
+  if (mission.position_tolerance <= 0.0)
+  {
+    setError("mission.position_tolerance must be positive.");
+    return false;
+  }
+
+  if (mission.yaw_tolerance_deg <= 0.0)
+  {
+    setError("mission.yaw_tolerance_deg must be positive.");
+    return false;
+  }
+
   if (safety.min_clearance < 0.0)
   {
     setError("safety.min_clearance should be non-negative.");
@@ -873,6 +922,13 @@ void ScopeParameters::printSummary() const
   std::cout << "  ideal_view_distance: " << scoring.ideal_view_distance << "\n";
   std::cout << "  max_clearance_for_score: " << scoring.max_clearance_for_score << "\n";
   std::cout << "  top_candidate_num: " << scoring.top_candidate_num << "\n";
+
+  std::cout << "[mission]\n";
+  std::cout << "  stop_and_turn_mode: " << mission.stop_and_turn_mode << "\n";
+  std::cout << "  default_capture_time: " << mission.default_capture_time << "\n";
+  std::cout << "  position_tolerance: " << mission.position_tolerance << "\n";
+  std::cout << "  yaw_tolerance_deg: " << mission.yaw_tolerance_deg << "\n";
+  std::cout << "  output_pitch: " << mission.output_pitch << "\n";
 
   std::cout << "[safety]\n";
   std::cout << "  enable_safety_filter: " << safety.enable_safety_filter << "\n";

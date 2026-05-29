@@ -23,6 +23,17 @@ struct CandidateExportResult
   std::string unsafe_yaml_path;
 };
 
+struct SelectedWaypointExportResult
+{
+  bool success = false;
+  std::string message;
+
+  std::string waypoint_yaml_path;
+  std::string waypoint_csv_path;
+
+  std::size_t waypoint_count = 0;
+};
+
 class WaypointIO
 {
 public:
@@ -51,6 +62,25 @@ public:
       const CandidateGenerationResult& candidate_result,
       const SafetyFilterResult& safety_result,
       const std::string& file_path,
+      const std::string& frame_id,
+      std::string* error_message = nullptr);
+
+  static SelectedWaypointExportResult exportSelectedWaypoints(
+      const OutputParams& output_params,
+      const MissionParams& mission_params,
+      const std::vector<ViewpointCandidate>& selected_candidates,
+      const std::string& frame_id);
+
+  static bool writeSelectedWaypointsCsv(
+      const std::vector<ViewpointCandidate>& selected_candidates,
+      const std::string& file_path,
+      const MissionParams& mission_params,
+      std::string* error_message = nullptr);
+
+  static bool writeSelectedWaypointsYaml(
+      const std::vector<ViewpointCandidate>& selected_candidates,
+      const std::string& file_path,
+      const MissionParams& mission_params,
       const std::string& frame_id,
       std::string* error_message = nullptr);
 
