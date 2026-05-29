@@ -116,13 +116,15 @@ add_definitions(
 add_library(scope_core
   src/common/parameters.cpp
   src/io/pcd_loader.cpp
+  src/io/waypoint_io.cpp
   src/map/cloud_preprocessor.cpp
   src/map/normal_estimator.cpp
   src/map/target_surface.cpp
   src/viewpoint/candidate_generator.cpp
+  src/viewpoint/fov_model.cpp
+  src/viewpoint/coverage_evaluator.cpp
   src/safety/collision_checker.cpp
   src/safety/safety_filter.cpp
-  src/io/waypoint_io.cpp
 )
 
 add_dependencies(scope_core

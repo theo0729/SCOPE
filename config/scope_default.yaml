@@ -80,7 +80,12 @@ target_surface:
   use_area_weight: false
 
 coverage:
+  enable_fov_filter: true
   target_coverage_ratio: 0.90
+
+  max_incidence_angle_deg: 70.0
+  min_visible_surface_points: 10
+
   min_view_redundancy: 1
   max_selected_viewpoint_num: 300
   min_new_covered_points: 10

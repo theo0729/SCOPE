@@ -377,15 +377,31 @@ bool ScopeParameters::loadFromYamlFile(const std::string& yaml_path)
                        target_surface.use_area_weight);
   
   const YAML::Node coverage_node = root["coverage"];
+
+  coverage.enable_fov_filter =
+      readScalar<bool>(coverage_node, "enable_fov_filter",
+                       coverage.enable_fov_filter);
+
   coverage.target_coverage_ratio =
       readScalar<double>(coverage_node, "target_coverage_ratio",
                          coverage.target_coverage_ratio);
+
+  coverage.max_incidence_angle_deg =
+      readScalar<double>(coverage_node, "max_incidence_angle_deg",
+                         coverage.max_incidence_angle_deg);
+
+  coverage.min_visible_surface_points =
+      readScalar<int>(coverage_node, "min_visible_surface_points",
+                      coverage.min_visible_surface_points);
+
   coverage.min_view_redundancy =
       readScalar<int>(coverage_node, "min_view_redundancy",
                       coverage.min_view_redundancy);
+
   coverage.max_selected_viewpoint_num =
       readScalar<int>(coverage_node, "max_selected_viewpoint_num",
                       coverage.max_selected_viewpoint_num);
+
   coverage.min_new_covered_points =
       readScalar<int>(coverage_node, "min_new_covered_points",
                       coverage.min_new_covered_points);
@@ -662,6 +678,19 @@ bool ScopeParameters::validate(std::string* error_message) const
     return false;
   }
 
+  if (coverage.max_incidence_angle_deg <= 0.0 ||
+      coverage.max_incidence_angle_deg > 90.0)
+  {
+    setError("coverage.max_incidence_angle_deg should be in (0, 90].");
+    return false;
+  }
+
+  if (coverage.min_visible_surface_points <= 0)
+  {
+    setError("coverage.min_visible_surface_points must be positive.");
+    return false;
+  }
+
   if (safety.min_clearance < 0.0)
   {
     setError("safety.min_clearance should be non-negative.");
@@ -766,7 +795,10 @@ void ScopeParameters::printSummary() const
             << target_surface.use_area_weight << "\n";
 
   std::cout << "[coverage]\n";
+  std::cout << "  enable_fov_filter: " << coverage.enable_fov_filter << "\n";
   std::cout << "  target_coverage_ratio: " << coverage.target_coverage_ratio << "\n";
+  std::cout << "  max_incidence_angle_deg: " << coverage.max_incidence_angle_deg << "\n";
+  std::cout << "  min_visible_surface_points: " << coverage.min_visible_surface_points << "\n";
   std::cout << "  min_view_redundancy: " << coverage.min_view_redundancy << "\n";
   std::cout << "  max_selected_viewpoint_num: " << coverage.max_selected_viewpoint_num << "\n";
   std::cout << "  min_new_covered_points: " << coverage.min_new_covered_points << "\n";

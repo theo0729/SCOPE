@@ -144,7 +144,12 @@ struct TargetSurfaceParams
 
 struct CoverageParams
 {
+  bool enable_fov_filter = true;
+
   double target_coverage_ratio = 0.90;
+
+  double max_incidence_angle_deg = 70.0;
+  int min_visible_surface_points = 10;
 
   int min_view_redundancy = 1;
   int max_selected_viewpoint_num = 300;
