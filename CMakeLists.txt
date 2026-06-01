@@ -126,6 +126,7 @@ add_library(scope_core
   src/viewpoint/viewpoint_selector.cpp
   src/safety/collision_checker.cpp
   src/safety/safety_filter.cpp
+  src/mission/mission_executor.cpp
 )
 
 add_dependencies(scope_core
@@ -158,12 +159,29 @@ target_link_libraries(scope_offline_node
   yaml-cpp
 )
 
+add_executable(scope_mission_executor_node
+  src/nodes/scope_mission_executor_node.cpp
+)
+
+add_dependencies(scope_mission_executor_node
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(scope_mission_executor_node
+  scope_core
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  yaml-cpp
+)
+
 ## ==============================
 ## Install
 ## ==============================
 install(TARGETS
   scope_core
   scope_offline_node
+  scope_mission_executor_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
