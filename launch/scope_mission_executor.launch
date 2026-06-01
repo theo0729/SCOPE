@@ -1,0 +1,44 @@
+<launch>
+  <arg name="waypoint_file" default="$(find scope)/log/output/selected_waypoints.yaml" />
+
+  <arg name="odom_topic" default="/visual_slam/odom" />
+  <arg name="goal_topic" default="/move_base_simple/goal" />
+
+  <arg name="desired_yaw_topic" default="/scope/desired_yaw" />
+  <arg name="capture_trigger_topic" default="/scope/capture_trigger" />
+  <arg name="mission_status_topic" default="/scope/mission_status" />
+
+  <arg name="auto_start" default="true" />
+  <arg name="enforce_yaw_alignment" default="false" />
+
+  <node pkg="scope"
+        type="scope_mission_executor_node"
+        name="scope_mission_executor_node"
+        output="screen">
+
+    <param name="waypoint_file" value="$(arg waypoint_file)" />
+
+    <param name="odom_topic" value="$(arg odom_topic)" />
+    <param name="goal_topic" value="$(arg goal_topic)" />
+
+    <param name="desired_yaw_topic" value="$(arg desired_yaw_topic)" />
+    <param name="capture_trigger_topic" value="$(arg capture_trigger_topic)" />
+    <param name="mission_status_topic" value="$(arg mission_status_topic)" />
+
+    <param name="package_name" value="scope" />
+
+    <param name="auto_start" value="$(arg auto_start)" />
+    <param name="enforce_yaw_alignment" value="$(arg enforce_yaw_alignment)" />
+
+<!-- 默认不发布 ，防止持续发布航点致使规划器重规划-->
+    <param name="republish_goal" value="false" />
+
+    <param name="goal_republish_period" value="1.0" />
+    <param name="control_rate" value="20.0" />
+    <param name="start_delay" value="1.0" />
+
+    <param name="default_position_tolerance" value="0.15" />
+    <param name="default_yaw_tolerance_deg" value="5.0" />
+    <param name="default_capture_time" value="2.0" />
+  </node>
+</launch>
